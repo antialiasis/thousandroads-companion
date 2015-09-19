@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{% endblock %} - {{year}} Serebii.net Forums Fanfiction Awards</title>
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+<!--<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">-->
+<!--[if lt IE 9]>
+  <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+  <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+<![endif]-->
+<style>
+h1 {
+    padding-bottom:5px;
+    border-bottom:1px solid #DDD;
+}
+
+form .help-text {
+    display:block;
+    font-size:smaller;
+    color:#888;
+}
+
+input, select, textarea {
+    border:1px solid #BBB;
+    padding:2px 5px;
+    border-radius:3px;
+}
+
+form input[type=text], form input[type=password] {
+    display:block;
+    width:300px;
+}
+
+select {
+    margin-bottom:2px;
+}
+
+.serebii-object input {
+    display:inline-block;
+}
+
+.alert {
+    margin-top:5px;
+    margin-bottom:5px;
+}
+
+.errorlist {
+    list-style-type:none;
+    margin:0;
+    padding:0;
+}
+
+textarea {
+    width:600px;
+    max-width:100%;
+    height:200px;
+}
+
+textarea.shrunk {
+    width:300px;
+    height:26px;
+}
+
+textarea.results-bbcode {
+    height:400px;
+}
+
+.form {
+    margin-bottom:20px;
+}
+
+.form-row {
+    margin-bottom:5px;
+}
+
+.panel-title .glyphicon {
+    font-size:12px;
+}
+
+.panel-title small {
+    margin-left:5px;
+}
+
+.loading.text-success, .loading.text-danger {
+    font-weight:bold;
+}
+
+#progress-tracker {
+    position:fixed;
+    bottom:5px;
+    right:5px;
+    padding:10px;
+    background:#FFF;
+    border:1px solid rgba(0, 0, 0, 0.2);
+    box-shadow:0px 1px 3px rgba(0, 0, 0, 0.1);
+    font-size:smaller;
+    max-height:90%;
+    overflow:auto;
+}
+
+#progress-tracker li {
+    cursor:pointer;
+}
+
+.collapse-container .collapse-marker, .collapse-container.collapse-in .collapse-body {
+    display:block;
+}
+
+.collapse-container .collapse-body, .collapse-container.collapse-in .collapse-marker {
+    display:none;
+}
+
+.collapse-button {
+    cursor:pointer;
+}
+
+blockquote.detail {
+    font-size:12px;
+}
+
+.nomination:nth-child(2n+1) {
+    background:#F5F5F5;
+}
+
+.nomination {
+    position:relative;
+    padding:0 5px;
+}
+
+.nomination-votes {
+    float:left;
+    width:5em;
+}
+
+.nomination label {
+    font-weight:normal;
+    margin-bottom:0;
+    display:block;
+}
+
+.nominator-info {
+    font-size:smaller;
+    padding:5px 15px;
+}
+
+.expand-info {
+    float:right;
+}
+
+.nominator-info blockquote {
+    font-size:1em;
+}
+
+.nominator-info p:last-child {
+    margin-bottom:0;
+}
+
+@media(min-width:767px) {
+    .nomination-list {
+        max-width:60%;
+    }
+
+    .nominator-info.floating {
+        position:absolute;
+        z-index:1;
+        top:0;
+        left:100%;
+        width:66.66%;
+        background:#FFF;
+        padding:2px 20px;
+    }
+
+    .nominator-info.floating blockquote {
+        padding-right:0;
+    }
+
+    .nominator-info:before {
+        position:absolute;
+        top:4px;
+        left:0;
+        border:solid transparent;
+        content:'';
+        height:0;
+        width:0;
+        border-width:5px;
+        border-right-color:#777;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="navbar navbar-default" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="{% url 'home' %}">{{year}} Serebii.net Forums Fanfiction Awards</a>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li{% block active_overview %}{% endblock %}><a href="{% url 'home' %}">Overview</a></li>
+                    {% if phase %}
+                    <li{% block active_all_nominations %}{% endblock %}><a href="{% url 'all_nominations' %}">All Nominations</a></li>
+                    {% endif %}
+                    {% if phase == 'voting' %}
+                    <li{% block active_voting %}{% endblock %}><a href="{% url 'voting' %}">Vote</a></li>
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                        {% if user.verified %}
+                            {% if phase == 'nomination' %}
+                    <li{% block active_nomination %}{% endblock %}><a href="{% url 'nomination' %}">Your Nominations</a></li>
+                            {% elif phase == 'voting' %}
+                                {% if user.is_staff %}
+                    <li{% block active_voting_stats %}{% endblock %}><a href="{% url 'voting_stats' %}">Voting Stats</a></li>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            {% if not user.member %}
+                    <li{% block active_verification %}{% endblock %}><a href="{% url 'verification' %}">Verify user</a></li>
+                            {% endif %}
+                        {% endif %}
+                    <li><a href="{% url 'logout' %}">Log out</a></li>
+                    {% else %}
+                    <li{% block active_login %}{% endblock %}><a href="{% url 'login' %}">Log in</a></li>
+                    <li{% block active_register %}{% endblock %}><a href="{% url 'register' %}">Register</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% for message in messages %}
+    <div class="alert{% if message.tags %} alert-{{message.tags}}{% endif %}">{{message}}</div>
+    {% endfor %}
+    {% block content %}
+    {% endblock %}
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+<script>
+    $("blockquote.detail").each(function() {
+        $(this).hide().parent().prepend('<a href="#" class="expand-detail">(Show details)</a>, ');
+    });
+
+    $(".expand-detail").click(function() {
+        $(this).parent().children(".detail").slideToggle();
+        return false;
+    });
+
+    $(".nominator-info").each(function() {
+        $(this).hide().addClass("floating");
+        var self = this;
+        $(this).parent().prepend('<a href="#" class="expand-info" title="Nomination information"><span class="glyphicon glyphicon-info-sign"></span></a> ');
+    });
+
+    $(".expand-info").click(function(e) {
+        e.stopPropagation();
+        var $info = $(this).parent().children(".nominator-info");
+        if ($info.is(":visible")) {
+            $info.fadeOut();
+        }
+        else {
+            $(".nominator-info").fadeOut();
+            $info.fadeIn();
+        }
+        return false;
+    });
+
+    $(".nominator-info").click(function(e) {
+        e.stopPropagation();
+    });
+
+    $("body").on('click', function(e) {
+        $(".nominator-info").fadeOut();
+    });
+
+    $("body").on('click', ".collapse-button", function() {
+        $(this).closest(".collapse-container").toggleClass("collapse-in");
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

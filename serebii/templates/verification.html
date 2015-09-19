@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Verify User{% endblock %}
+
+{% block active_verification %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Verify User</h1>
+
+{% if not user.is_authenticated %}
+<p>You are not logged in.</p>
+{% elif user.verified %}
+<p>You are already verified as <strong>{{user.member.link_html|safe}}</strong>. Score!</p>
+{% elif user.member %}
+<p>You are already associated with a forum member. Please contact Dragonfree on the forums to be manually verified.</p>
+{% else %}
+<p>To verify your Serebii.net forums identity, you must prove that you control an account on the forums. This is done by editing the "Biography" section on your user profile to contain a verification code unique to your fanfiction awards user account and submitting the form below.</p>
+
+<p>Your verification code is <strong>{{user.verification_code}}</strong>. To verify yourself so you can nominate and vote in the fanfic awards, simply perform the following steps:</p>
+
+<ol>
+<li>Go to <strong><a href="http://www.serebiiforums.com/member.php" target="_blank">your profile page</a></strong> on the forums. If you are logged in, that link should redirect you to it (opens in a new window/tab).</li>
+<li>On your profile page, switch to the <strong>About Me</strong> tab.</li>
+<li>Click the small pencil icon next to the <strong>Biography</strong> label. This should turn the field into an editable box.</li>
+<li>Anywhere in the editable box, paste in the code <strong>{{user.verification_code}}</strong>.</li>
+<li>Press the "Save" button below the box. This should turn it back into text.</li>
+<li>Copy your profile page's URL from your browser's address bar and paste it into the box below.</li>
+<li>Submit the form. If you did everything correctly, you should be successfully verified and can remove the verification code from your profile.</li>
+</ol>
+
+<form action="" method="post">
+{% csrf_token %}
+{% include "form.html" %}
+<p><button type="submit" class="btn btn-primary">Verify me!</button></p>
+</form>
+{% endif %}
+{% endblock %}

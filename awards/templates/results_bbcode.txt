@@ -1,0 +1,6 @@
+{% load humanize %}{% for year_award in year_awards %}{% with award=year_award %}{% ifchanged award.award.category %}
+
+[b][u]{{award.award.category}}[/u][/b]{% endifchanged %}
+{% if award.distinct_nominations %}
+[b]{{award.award}}[/b]{% for nomination in award.distinct_nominations %}
+{% if nomination.place.0 == 1 %}[i]{% endif %}{% if nomination.place.0 == nomination.place.1 %}{{nomination.place.0|ordinal}}{% else %}{{nomination.place.0|ordinal}}-{{nomination.place.1|ordinal}}{% endif %} place ({{nomination.get_votes}} vote{{nomination.get_votes|pluralize}}): {{nomination.nomination_bbcode|safe}}{% if nomination.place.0 == 1 %}[/i]{% endif %}{% endfor %}{% endif %}{% endwith %}{% endfor %}

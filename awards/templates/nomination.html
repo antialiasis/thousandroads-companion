@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Nominations{% endblock %}
+
+{% block active_nomination %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Nominations</h1>
+
+{% if not phase == 'nomination' %}
+<p>The nomination phase has concluded. {% if phase == 'voting' %}<a href="{% url 'voting' %}">Click here to vote for your favorites.</a>{% else %}Come back in time for next year's awards!{% endif %}</p>
+{% elif not user.verified %}
+<p>To nominate, you must <a href="{% url 'verification' %}">verify your account</a>.</p>
+{% else %}
+
+<p>These are {% if formset.member == user.member %}your{% else %}<strong>{{formset.member}}</strong>'s{% endif %} nominations for the {{formset.year}} awards.{% if formset.member == user.member %} For as long as the nomination phase lasts, you can come back here and alter your nominations, even after you click the "Submit nominations" button.{% endif %}</p>
+
+<p><strong>All nominated stories must have been updated in {{year}}, and individual scenes, quotes or chapters nominated must have been posted in {{year}}, according to the UTC timezone.</strong> If you make an ineligible nomination, you will be asked to change it. You may make up to two nominations in each category, so long as</p>
+
+<ul>
+<li>you nominate at least <strong>{{min_different_nominations|apnumber}}</strong> different authors in all</li>
+<li>you do not nominate yourself or your own work</li>
+<li>no one story is nominated more than <strong>{{max_fic_nominations|apnumber}}</strong> times</li>
+<li>no one author is nominated more than <strong>{{max_person_nominations|apnumber}}</strong> times</li>
+</ul>
+
+<p>These limits will be enforced automatically by the system.</p>
+
+<form action="" method="post">
+{% csrf_token %}
+{{formset.management_form}}
+{% if formset.non_form_errors %}
+<div class="alert alert-danger">
+{{formset.non_form_errors}}
+</div>
+{% elif formset.errors %}
+<div class="alert alert-danger">
+Please correct the errors below.
+</div>
+{% endif %}
+{% regroup formset.forms by award as awards %}
+{% for award in awards %}
+{% ifchanged award.grouper.category %}
+<h2>{{award.grouper.category}}</h2>
+{% endifchanged %}
+<div class="panel {% if award.list.0.errors or award.list.1.errors %}panel-danger{% else %}panel-default{% endif %}">
+<div class="panel-heading">
+<h3 class="panel-title">{{award.grouper}} <small>{% if not award.list.0.is_unset and not award.list.1.is_unset %}2 nominations{% elif not award.list.0.is_unset or not award.list.1.is_unset %}1 nomination{% else %}0 nominations{% endif %}</small></h3>
+</div>
+<div class="panel-body collapse in">
+{% for form in award.list %}
+{% include "form.html" %}
+{% endfor %}
+</div>
+</div>
+{% endfor %}
+<p><button type="submit" class="btn btn-primary">Submit nominations</button></p>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var fics = {
+        {% for fic in all_fics %}
+        {{fic.pk}}: {
+            title: "{{fic.title|escapejs}}",
+            authors: [{% for author in fic.authors.all %}{% if not forloop.first %}, {% endif %}{{author.pk}}{% endfor %}]
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    var authors = {
+        {% for author in all_authors %}
+        {{author.pk}}: {
+            username: "{{author.username|escapejs}}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    $(".serebii-object").each(function() {
+        var $select = $(this).children("select");
+        if ($select.children().length <= 1) {
+            $select.hide();
+        }
+    }).children("select").change(function() {
+        if ($(this).val() !== "") {
+            // We've chosen a fic in the select menu - hide the input field
+            $(this).siblings("input").hide();
+        }
+        else {
+            $(this).siblings("input").show();
+        }
+    }).change();
+
+    function resize_textarea() {
+        if ($(this).val().length > 40 || $(this).val().indexOf('\n') !== -1) {
+            $(this).removeClass("shrunk");
+        }
+        else {
+            $(this).addClass("shrunk");
+        }
+    }
+
+    $("textarea").addClass("shrunk").on('keyup', resize_textarea).on('paste', function() {
+        var self = this;
+        setTimeout(function() {
+            resize_textarea.call(self);
+        }, 10);
+    }).on('keydown', function(e) {
+        if (e.which === 13) {
+            $(this).removeClass("shrunk");
+        }
+    }).keyup();
+
+    setTimeout(function() {
+        $("textarea").css("transition", "width 0.5s, height 0.5s");
+    }, 10);
+
+    $(".panel-body").collapse({toggle: false});
+    $(".panel-default .panel-body").collapse('hide');
+
+    $(".panel-heading").css("cursor", "pointer").click(function() {
+        $(this).next().collapse('toggle');
+    }).children().prepend('<span class="caret"></span> ');
+
+
+    var lookup_urls = {
+        fic: '{% url 'lookup_fic' %}',
+        nominee: '{% url 'lookup_member' %}'
+    };
+
+    function add_to_selects(field_name, object) {
+        var $selects = $(".field-" + field_name + " select");
+        if ($selects.first().children("[value=" + object.pk + "]").length === 0) {
+            var $options = $selects.first().children();
+            var $new_option = $('<option value="' + object.pk + '"></option>').text(object.name);
+            var i;
+            for (i = 0; i < $options.length; i++) {
+                if ($options.eq(i).text() > object.name) {
+                    break;
+                }
+            }
+            if (i < $options.length) {
+                $selects.children().filter(":nth-child(" + (i + 1) + ")").before($new_option);
+            }
+            else {
+                $selects.append($new_option);
+            }
+        }
+    }
+
+    function lookup($elem, lookup_type) {
+        $elem.next(".loading").remove();
+        if ($elem.val() !== '') {
+            $elem.after(' <span class="loading"><img src="{{STATIC_URL}}ajax-loader.gif" alt=""> Looking up URL...</span>');
+            $.get(lookup_urls[lookup_type], {url: $.trim($elem.val())}, function(json) {
+                if ('error' in json) {
+                    $elem.next(".loading").text(json.error).addClass("text-danger");
+                }
+                else {
+                    // Add the item into the appropriate object
+                    if (lookup_type === 'fic') {
+                        fics[json.pk] = json.object;
+                    }
+                    else {
+                        authors[json.pk] = json.object;
+                    }
+                    // Add the item into all fic dropdowns if not present
+                    add_to_selects(lookup_type, json);
+                    // Add any other items (e.g. a fic's authors) into the objects and all appropriate dropdowns if not present
+                    $.each(json.other_objects, function() {
+                        if (this.type === 'fic') {
+                            fics[this.pk] = this.object;
+                        }
+                        else {
+                            authors[this.pk] = this.object;
+                        }
+                        add_to_selects(this.type, this);
+                    });
+                    $elem.siblings("select").val(json.pk).change();
+                    $elem.val("");
+                    $elem.next(".loading").text("Lookup successful!").addClass("text-success");
+                    update_progress();
+                    setTimeout(function() { $elem.next(".loading").fadeOut(3000); }, 2000);
+                }
+            });
+        }
+    }
+
+    $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Nominations</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have nominated:</div></div>');
+
+    function update_progress() {
+        var nominated_fics = {};
+        var nominated_authors = {};
+
+        $(".field-fic").each(function() {
+            var selected = $(this).find("select").val();
+            if (selected) {
+                if (!(selected in nominated_fics)) {
+                    nominated_fics[selected] = 1;
+                }
+                else {
+                    nominated_fics[selected]++;
+                }
+                for (var i = 0; i < fics[selected].authors.length; i++) {
+                    var author = fics[selected].authors[i];
+                    if (!(author in nominated_authors)) {
+                        nominated_authors[author] = 1;
+                    }
+                    else {
+                        nominated_authors[author]++;
+                    }
+                }
+            }
+        });
+
+        $(".field-nominee").each(function() {
+            var selected = $(this).find("select").val();
+            if (selected) {
+                if (!(selected in nominated_authors)) {
+                    nominated_authors[selected] = 1;
+                }
+                else {
+                    nominated_authors[selected]++;
+                }
+            }
+        });
+
+        var $progress_list = $("#progress-tracker .collapse-body");
+        $progress_list.children(":not(.collapse-button)").remove();
+
+        var fic_lis = [];
+        var author_lis = [];
+
+        function li_sorter($a, $b) {
+            if ($a.text().toLowerCase() < $b.text().toLowerCase()) {
+                return -1;
+            }
+            else if ($a.text().toLowerCase() > $b.text().toLowerCase()) {
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+
+        for (var fic in nominated_fics) {
+            var $li = $('<li' + (nominated_fics[fic] > {{max_fic_nominations}} ? ' class="text-danger"' : '') + '>' + fics[fic].title + ' (' + nominated_fics[fic] + ' nominations)</li>').data('type', 'fic').data('id', fic);
+            $li.attr('title', "Click to cycle through nominations");
+            fic_lis.push($li);
+        }
+        for (var author in nominated_authors) {
+            var $li = $('<li' + (nominated_authors[author] > {{max_person_nominations}} ? ' class="text-danger"' : '') + '>' + authors[author].username + ' (' + nominated_authors[author] + ' nominations)</li>').data('type', 'author').data('id', author);
+            $li.attr('title', "Click to cycle through nominations");
+            author_lis.push($li);
+        }
+        if (fic_lis.length > 0) {
+            var $fic_list = $('<ul class="list-unstyled">');
+            fic_lis.sort(li_sorter);
+            $.each(fic_lis, function() { $fic_list.append(this); });
+            $progress_list.append('<h4>Fics</h4>').append($fic_list);
+        }
+        if (author_lis.length > 0) {
+            var $author_list = $('<ul class="list-unstyled">');
+            author_lis.sort(li_sorter);
+            $.each(author_lis, function() { $author_list.append(this); });
+            $progress_list.append('<h4>Authors</h4>').append($author_list);
+        }
+        if (author_lis.length === 0 && fic_lis.length === 0) {
+            $progress_list.append(' Nothing yet');
+        }
+
+        // Make the nominations cycle through their actual nominations when clicked
+        $progress_list.find("li").each(function() {
+            var self = this;
+            var $awards = $(".field-fic select, .field-nominee select").filter(function() {
+                if ($(self).data("type") === 'fic' && $(this).is(".field-nominee select")) {
+                    return false;
+                }
+                var selected = $(this).val();
+                if (selected) {
+                    if ($(self).data("type") === 'fic') {
+                        return selected === $(self).data("id");
+                    }
+                    else {
+                        if ($(this).is(".field-fic select")) {
+                            return $.inArray($(self).data("id") * 1, fics[selected].authors) !== -1;
+                        }
+                        else {
+                            return selected === $(self).data("id");
+                        }
+                    }
+                }
+                else {
+                    return false;
+                }
+            }).closest(".panel");
+
+            var cur_index = -1;
+
+            $(this).on('click', function() {
+                cur_index++;
+                if (cur_index >= $awards.length) {
+                    cur_index = 0;
+                }
+                $awards.eq(cur_index).children(".panel-body").collapse('show');
+                $(window).scrollTop($awards.eq(cur_index).offset().top);
+            });
+        });
+
+        $(".panel").each(function() {
+            var num_nominations = $(this).find("select").filter(function() { return $(this).val(); }).length;
+            $(this).find(".panel-heading small").text(num_nominations + " nomination" + (num_nominations === 1 ? "" : "s"));
+        });
+    }
+    update_progress();
+
+    $(".field-fic input").blur(function() {
+        lookup($(this), 'fic');
+    });
+
+    $(".field-nominee input").blur(function() {
+        lookup($(this), 'nominee');
+    });
+
+    $(".field-fic select, .field-nominee select").change(update_progress);
+</script>
+{% endblock %}

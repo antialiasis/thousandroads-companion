@@ -1,0 +1,44 @@
+{% load serebii_utils %}
+{% for year_award in year_awards %}
+{% with award=year_award %}
+{% ifchanged award.award.category %}
+<h2>{{award.award.category}}</h2>
+{% endifchanged %}
+<fieldset id="field-award_{{award.award.pk}}">
+<legend>{{award.award}}</legend>
+{% if form %}
+{% voting_form_field_errors award.award %}
+{% endif %}
+{% if award.distinct_nominations %}
+<ul class="list-unstyled nomination-list">
+{% if form %}<li class="nomination"><label>{% voting_form_field award.award %} (No vote)</label></li>{% endif %}
+{% for nomination in award.distinct_nominations %}
+<li class="nomination">{% if nomination.place %}<div class="nomination-votes">{{nomination.get_votes}} vote{{nomination.get_votes|pluralize}}: </div>{% endif %}<div class="nomination-line">{% if form %}<label>{% voting_form_field award.award nomination %}{% endif %}
+{{nomination.nomination_html|safe}}{% if form %}</label>{% endif %}</div>
+<div class="nominator-info">
+{% with nominator_details=nomination.get_nominator_details %}
+<p>Nominated by {% for nominator in nominator_details %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}{{nominator.member.link_html|safe}}{% if user.is_staff %} [<a href="{% url 'admin_nomination' member=nominator.member.pk year=award.year %}">edit</a>]{% endif %}{% endfor %}</p>
+
+{% if award.award.has_samples %}
+<p>Samples: {% for nominator in nominator_details %}{% if not forloop.first %}, {% endif %}<a href="{{nominator.link}}">({{nominator.member}})</a>{% endfor %}
+{% endif %}
+
+{% for nominator in nominator_details %}
+{% if nominator.comment %}
+<blockquote>
+{{nominator.comment|parse_bbcode}}
+<footer>{{nominator.member.link_html|safe}}</footer>
+</blockquote>
+{% endif %}
+{% endfor %}
+{% endwith %}
+</div>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No nominations have been made for this award.</p>
+{% endif %}
+</fieldset>
+{% endwith %}
+{% endfor %}

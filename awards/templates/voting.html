@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load serebii_utils %}
+{% block title %}Voting{% endblock %}
+
+{% block active_voting %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Voting</h1>
+
+{% if not phase == 'voting' %}
+<p>The voting phase {% if not phase == 'finished' %}has not started. <a href="{% url 'nomination' %}">Click here to enter your nominations.</a>{% else %}is over. Come back in time for next year's awards!{% endif %}</p>
+{% elif user.is_authenticated and not user.member %}
+<p>To vote, you must <a href="{% url 'verification' %}">verify your account</a>.</p>
+{% elif not user.is_authenticated %}
+<p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to vote.</strong> Doing so will allow you to return at any time during the voting phase to change your votes if you so desire and eliminates the need to manually confirm your identity on the forums after voting.</p>
+
+<p>However, if you'd rather not register, it is also possible to vote without it and be manually verified after submitting your votes. To do so, enter the link to your Serebii.net forums user profile into the form field below and press Continue. You can get this link by clicking <a href="http://www.serebiiforums.com/member.php" target="_blank">here</a> and copying the address it redirects you to, provided you are logged in to the forums.</p>
+
+<form action="{% url 'voting' %}" method="post">
+{% csrf_token %}
+{% include 'form.html' %}
+<p><button type="submit" class="btn btn-primary">Continue</button></p>
+</form>
+{% else %}
+<p>Here, you can submit your votes for the {{year}} fanfic awards.</p>
+
+<p>You must place a vote in <strong>at least half of the available categories</strong>. This is intended to encourage you to broaden your horizons and read more stories, rather than only voting in those categories your existing favorite fics happen to be nominated in. If you can't muster a vote in half of the categories, read some of the stories nominated in other categories - you may find some new favorites!</p>
+
+<form action="{% url 'voting' %}" method="post">
+{% csrf_token %}
+{% if form.non_field_errors %}
+<div class="alert alert-danger">{{form.non_field_errors}}</div>
+{% elif form.errors %}
+<div class="alert alert-danger">
+<p>There were some problems with your votes. Please review the following categories:</p>
+{% voting_form_errors %}
+</div>
+{% endif %}
+
+{% include "nomination_list.html" %}
+
+<p><button type="submit" class="btn btn-primary">Submit Votes</button></p>
+</form>
+{% endif %}
+{% endblock %}

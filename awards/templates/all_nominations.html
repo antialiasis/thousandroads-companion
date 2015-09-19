@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Current Nominations{% endblock %}
+
+{% block active_all_nominations %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Current Nominations</h1>
+
+<p>{% if phase == 'nomination' %}These are the nominations that have been made so far. Note that the moderators may have yet to merge nominations for the same thing or make other corrections.{% if user.is_authenticated and user.verified %} You may add your own nominations <a href="{% url 'nomination' %}">here</a>.{% endif %}{% else %}These are all the nominations for the {{year}} awards.{% if user.is_authenticated and user.verified and phase == 'voting' %} Vote for your favorites <a href="{% url 'voting' %}">here</a>.{% endif %}{% endif %}</p>
+
+<p>The following members have submitted nominations: {% for member in nominators %}{% if not forloop.first %}, {% endif %}<strong>{{member}}</strong>{% empty %}None{% endfor %}{% if nominators|length %} ({{nominators|length}} member{{nominators|length|pluralize}}){% endif %}</p>
+
+{% include "nomination_list.html" %}
+{% endblock %}

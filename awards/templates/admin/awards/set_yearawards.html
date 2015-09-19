@@ -1,0 +1,83 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static admin_modify %}{% load cycle from future %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ app_label|capfirst|escape }}</a>
+&rsaquo; Set awards for {{year_editing}}
+</div>
+{% endblock %}
+
+{% block content %}<div id="content-main">
+{% if formset.forms %}
+  <form action="" method="post" id="{{ opts.model_name }}_form">{% csrf_token %}
+{% if errors %}
+    <p class="errornote">
+    {% if errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+    </p>
+    {{ adminform.form.non_field_errors }}
+{% endif %}
+    <div class="inline-group" id="{{ inline_admin_formset.formset.prefix }}-group">
+      <div class="tabular inline-related {% if forloop.last %}last-related{% endif %}">
+    {{ formset.management_form }}
+    <fieldset class="module">
+       <h2>Active awards for {{year_editing}}</h2>
+       {{ formset.non_form_errors }}
+       <table>
+         <thead><tr>
+            <th>Category</th>
+            <th>Award</th>
+         {% for field in formset.forms.0 %}
+           {% if not field.widget.is_hidden %}
+             <th{% if field.required %} class="required"{% endif %}>{{ field.label|capfirst }}
+             {% if field.help_text %}&nbsp;<img src="{% static "admin/img/icon-unknown.gif" %}" class="help help-tooltip" width="10" height="10" alt="({{ field.help_text|striptags }})" title="{{ field.help_text|striptags }}" />{% endif %}
+             </th>
+           {% endif %}
+         {% endfor %}
+         </tr></thead>
+
+         <tbody>
+         {% for form in formset %}
+            {% if form.non_field_errors %}
+            <tr><td colspan="3">{{ form.non_field_errors }}</td></tr>
+            {% endif %}
+            <tr class="form-row {% cycle "row1" "row2" %}"
+                 id="{{ formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %}">
+            <td>
+              <a href="{% url 'admin:awards_category_change' form.award.category.pk %}">{{form.award.category}}</a>
+            </td>
+            <th><a href="{% url 'admin:awards_award_change' form.award.pk %}">{{form.award}}</a>
+              {% spaceless %}
+              {% for field in form %}
+                {% if field.is_hidden %} {{ field.field }} {% endif %}
+              {% endfor %}
+              {% endspaceless %}
+            </th>
+            {% for field in form %}
+              <td{% if field.name %} class="field-{{ field.name }}"{% endif %}>
+                {{ field.errors.as_ul }}
+                {{ field }}
+              </td>
+            {% endfor %}
+            </tr>
+         {% endfor %}
+         </tbody>
+       </table>
+    </fieldset>
+      </div>
+    </div>
+
+{% load i18n admin_urls %}
+<div class="submit-row">
+<input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />
+</div>
+
+  </form>
+{% else %}
+<p>You have not defined any awards.</p>
+{% endif %}
+</div>
+{% endblock %}

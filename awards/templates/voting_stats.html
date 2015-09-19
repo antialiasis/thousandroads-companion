@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Voting Stats{% endblock %}
+
+{% block active_voting_stats %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Voting Stats</h1>
+
+{% if not phase == 'voting' %}
+<p>The voting phase {% if not phase == 'finished' %}has not yet started{% else %}is over{% endif %}.</p>
+{% endif %}
+
+<p>These are the current results of the vote. The following members have voted: {% for member in voters %}{% if not forloop.first %}, {% endif %}<strong>{{member}}</strong>{% empty %}None{% endfor %}{% if voters %} ({{voters|length}} member{{voters|length|pluralize}}){% endif %}</p>
+
+{% if unverified_voters %}
+<p>{% for member in unverified_voters %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<strong>{{member}}</strong>{% endfor %} {{unverified_voters|length|pluralize:"has, have"}} submitted unverified votes.</p>
+{% endif %}
+
+{% include "nomination_list.html" %}
+
+<h2>Results BBCode</h2>
+
+<p>This can be copy-pasted to create the results thread.</p>
+<textarea rows="60" cols="50" class="results-bbcode">
+{% include "results_bbcode.txt" %}
+</textarea>
+{% endblock %}

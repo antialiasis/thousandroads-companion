@@ -1,0 +1,14 @@
+Django==1.8.4
+South==0.8.4
+bbcode==1.0.15
+beautifulsoup4==4.3.2
+dj-database-url==0.3.0
+dj-static==0.0.6
+django-extra-views==0.6.4
+django-toolbelt==0.0.1
+gunicorn==18.0
+psycopg2==2.5.2
+pystache==0.5.3
+requests==2.2.1
+six==1.5.2
+static==1.0.2
