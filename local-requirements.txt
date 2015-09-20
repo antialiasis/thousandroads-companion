@@ -2,5 +2,6 @@ Django==1.8.4
 bbcode==1.0.21
 beautifulsoup4==4.4.0
 django-extra-views==0.7.1
-django-toolbelt==0.0.1
 requests==2.7.0
+dj-database-url==0.3.0
+dj-static==0.0.6
