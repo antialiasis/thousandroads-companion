@@ -24,7 +24,7 @@ class YearlyData(models.Model):
     for easy querying of objects from the appropriate year.
 
     """
-    year = models.PositiveIntegerField(validators=[MinValueValidator(2008), MaxValueValidator(settings.MAX_YEAR)], db_index=True, default=CURRENT_YEAR)
+    year = models.PositiveIntegerField(validators=[MinValueValidator(settings.MIN_YEAR), MaxValueValidator(settings.MAX_YEAR)], db_index=True, default=CURRENT_YEAR)
 
     objects = YearlyManager()
 
