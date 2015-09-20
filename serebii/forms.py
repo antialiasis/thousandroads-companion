@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.utils.crypto import get_random_string
-from bs4 import BeautifulSoup
 from serebii.models import Member, User, MemberPage
 
 

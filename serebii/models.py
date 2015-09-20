@@ -17,7 +17,7 @@ def pretty_join(items, word='and'):
 
 def get_soup(url):
     request = requests.get(url, cookies={'bb_userid': settings.SEREBII_USER_ID, 'bb_password': settings.SEREBII_USER_PWHASH})
-    return BeautifulSoup(request.text)
+    return BeautifulSoup(request.text, 'html.parser')
 
 
 def get_post_author(post):
