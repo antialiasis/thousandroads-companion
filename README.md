@@ -1,6 +1,11 @@
 # serebii-fanfic-awards
 The website for the Serebii.net forums fanfiction awards. This project is maintained by Dragonfree (antialiasis), but pull requests are welcome (so long as they're good pull requests).
 
+This is a [Django](http://www.djangoproject.com) app. Refer to the Django documentation if you have no idea what is going on here.
+
+The functionality is split across two 'apps', "awards" and "serebii". Roughly, serebii handles accounts and models that directly stand for forum entities, such as fics and members, whereas awards handles the actual awards part, but sometimes the distinction is a bit fuzzy. The level of documentation and comments varies; generally I comment things if I feel like I'm doing something nonobvious and forget about it otherwise. But if there's something that confuses you, just ask and I will try to explain it and document/comment it better.
+
+
 ## Installation
 
 You *should* be able to run this on your own machine by following these instructions:
