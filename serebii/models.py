@@ -49,7 +49,17 @@ class SerebiiPage(object):
 
     @classmethod
     def from_url(cls, url, force_download=False):
-        params = cls.get_params_from_url(url) # Will raise ValueError if the URL is invalid
+        """
+        Takes a URL to a Serebii page for this object type and returns
+        a corresponding page instance.
+
+        If force_download is True, the page will always be fetched and
+        parsed; otherwise, it'll just grab the relevant parameters from
+        the URL and find an existing object matching those parameters,
+        if one exists.
+
+        """
+        params = cls.get_params_from_url(url)  # Will raise ValueError if the URL is invalid
         if not force_download:
             return cls(cls.object_class.from_params(**params))
         soup = get_soup(url)
@@ -58,10 +68,18 @@ class SerebiiPage(object):
 
     @classmethod
     def object_from_soup(cls, soup, **kwargs):
+        """
+        Returns an object corresponding to the given soup.
+
+        """
         return cls.object_class.from_soup(soup, **kwargs)
 
     @classmethod
     def get_params_from_url(cls, url):
+        """
+        Extracts relevant parameters from a Serebii URL.
+
+        """
         url_regex = re.compile(r'^(?:http:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?%s' % (cls.page, cls.object_id_regex), re.U)
         match = url_regex.match(url)
         if match is None:
@@ -70,9 +88,18 @@ class SerebiiPage(object):
             return match.groupdict()
 
     def get_url(self):
+        """
+        Returns a URL for this page.
+
+        """
         return self.object.link()
 
     def get_soup(self):
+        """
+        Returns a soup for this page. If we don't have a cached one,
+        we'll fetch the page first.
+
+        """
         if self._soup is not None:
             return self._soup
         else:
@@ -86,10 +113,18 @@ class SerebiiObject(object):
     """
     @classmethod
     def from_soup(cls, soup, **kwargs):
+        """
+        Returns an object corresponding to the given soup.
+
+        """
         return cls(**kwargs)
 
     @classmethod
     def from_params(cls, save=False, **kwargs):
+        """
+        Returns an object corresponding to the given params.
+
+        """
         try:
             # See if we can get the object from the database just from the parameters
             return cls.objects.get(**kwargs)
@@ -103,9 +138,17 @@ class SerebiiObject(object):
 
     @classmethod
     def get_page_class(self):
+        """
+        Returns the page class for this object type.
+
+        """
         return SerebiiPage
 
     def get_page(self):
+        """
+        Returns a SerebiiPage instance corresponding to this object.
+
+        """
         page_class = self.__class__.get_page_class()
         return page_class(self)
 
@@ -154,6 +197,17 @@ def get_verification_code():
 
 
 class User(AbstractUser):
+    """
+    A user object, not to be confused with a Serebii member.
+
+    In order to do much of anything, users need to associate their
+    account with a Serebii member (the member field). This is done
+    either by verifying ownership of a Serebii account (in which case
+    verified is True) or by registering a temporary account as that
+    member (in which case verified is False, until the user is manually
+    verified by an admin).
+
+    """
     member = models.ForeignKey(Member, blank=True, null=True)
     verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=10, default=get_verification_code)
@@ -184,6 +238,15 @@ class FicManager(models.Manager):
 
 
 class Fic(SerebiiObject, models.Model):
+    """
+    A fic, defined by its Serebii thread and possibly post ID.
+
+    Right now, all fics are threads. Automating the detection of
+    individual posts constituting separate fics is a hard problem.
+    Maybe I will be motivated to figure it out if some multi-fic
+    threads actually get nominated.
+
+    """
     title = models.CharField(max_length=255)
     authors = models.ManyToManyField(Member)
     thread_id = models.PositiveIntegerField()

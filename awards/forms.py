@@ -271,7 +271,7 @@ class BaseNominationFormSet(BaseFormSet):
 
     def _construct_form(self, i, **kwargs):
         defaults = self.initial[i]
-        defaults['empty_permitted'] = True # All forms are allowed to be empty
+        defaults['empty_permitted'] = True  # All forms are allowed to be empty
         defaults.update(**kwargs)
         return super(BaseNominationFormSet, self)._construct_form(i, **defaults)
 

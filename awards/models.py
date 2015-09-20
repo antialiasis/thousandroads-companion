@@ -134,7 +134,7 @@ class YearAwardManager(YearlyManager):
     def get_with_distinct_nominations(self, year=None, with_votes=False):
         """
         Fetches awards for a given year along with the nominations for
-        each of them, in the form of NominationSets that eliminte
+        each of them, in the form of NominationSets that eliminate
         duplicates.
 
         """
