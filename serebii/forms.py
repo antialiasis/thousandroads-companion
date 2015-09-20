@@ -10,6 +10,10 @@ from serebii.models import Member, User, MemberPage
 
 
 class SerebiiLinkField(forms.CharField):
+    """
+    A field for a link to a SerebiiPage.
+
+    """
     empty_values = [None]
 
     def __init__(self, page_class, *args, **kwargs):
@@ -40,6 +44,11 @@ class RegisterForm(UserCreationForm):
 
 
 class UserLookupForm(forms.Form):
+    """
+    A form for looking up a verified user by username, for the reset
+    password feature.
+
+    """
     username = forms.CharField()
 
     def clean(self):
@@ -63,6 +72,11 @@ def validate_verification_code(code, soup):
 
 
 class PasswordResetForm(forms.Form):
+    """
+    A password reset form that verifies a verification code on the
+    user's Serebii profile page rather than sending e-mails.
+
+    """
     password1 = forms.CharField(label=u"New password", widget=forms.PasswordInput)
     password2 = forms.CharField(label=u"Confirm password", widget=forms.PasswordInput)
 
@@ -90,6 +104,11 @@ class PasswordResetForm(forms.Form):
 
 
 class VerificationForm(forms.Form):
+    """
+    A form for verifying a user through a verification code on a
+    profile page.
+
+    """
     profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. http://www.serebiiforums.com/member.php?388-Dragonfree", force_download=True)
 
     def __init__(self, user, *args, **kwargs):
@@ -107,6 +126,10 @@ class VerificationForm(forms.Form):
 
 
 class TempUserProfileForm(forms.Form):
+    """
+    A form that creates a temporary user account from the given profile link.
+
+    """
     profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. http://www.serebiiforums.com/member.php?388-Dragonfree", force_download=True)
 
     def clean(self):
@@ -117,7 +140,7 @@ class TempUserProfileForm(forms.Form):
             self.member = profile_page.object
             self.member.save()
 
-            # Check if there is already a verified user associated with this memebr
+            # Check if there is already a user associated with this memebr
             if User.objects.filter(member=self.member).exists():
                 raise ValidationError(u"This member has already registered and verified or submitted votes under another username. Please log in to that account to submit or edit verified votes. If you did not register an account or submit votes, please contact Dragonfree.")
         return self.cleaned_data
