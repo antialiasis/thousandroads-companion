@@ -1,12 +1,21 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
+import datetime
+import dateutil.parser as parser
+import dateutil.tz as tz
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import logout
 from django.contrib.auth.models import AbstractUser
 from bs4 import BeautifulSoup
+
+def check_in_awards_year(year, date):
+    if date < datetime.datetime(year, 12, 31, 23, 59, tzinfo=tz.tzutc()) and date > datetime.datetime(year, 1, 1, 0, 0, tzinfo=tz.tzutc()):
+        return True
+    else:
+        return False
 
 
 def pretty_join(items, word='and'):
@@ -16,7 +25,7 @@ def pretty_join(items, word='and'):
 
 
 def get_soup(url):
-    request = requests.get(url, cookies={'bb_userid': settings.SEREBII_USER_ID, 'bb_password': settings.SEREBII_USER_PWHASH})
+    request = requests.get(url, cookies={'bb_userid': str(settings.SEREBII_USER_ID), 'bb_password': settings.SEREBII_USER_PWHASH})
     return BeautifulSoup(request.text, 'html.parser')
 
 
@@ -25,6 +34,15 @@ def get_post_author(post):
     username = user_link.strong.get_text(strip=True)
     user_id = MemberPage.get_params_from_url(user_link['href'])['user_id']
     return Member(user_id=user_id, username=username)
+
+
+def get_timezone(page):
+    tz_text = page.find('div', id="footer_time").get_text()
+    tz_bits = tz_text.split(' ')
+    tz = tz_bits[4][:-1]
+
+    tz = '{}{:0>2d}00'.format(tz[0], int(tz[1:]))
+    return tz
 
 
 class SerebiiPage(object):
@@ -301,15 +319,28 @@ class Fic(SerebiiObject, models.Model):
 
     @classmethod
     def from_soup(cls, soup, thread_id, post_id):
+        print 'Entering from_soup method'
         forum_link = soup.find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
         if forum_link['href'] not in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics'):
             raise ValidationError(u"This thread does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic.")
         title_link = soup.find('span', class_="threadtitle").a
-        if post_id is not None and False:  # TODO: make it actually possible to nominate individual posts
+
+        if post_id is not None:  # TODO: make it actually possible to nominate individual posts
             # The fic starts in a particular post
             post = soup.find(id="post_%s" % post_id)
             title = post.find('h2', class_="posttitle").get_text(strip=True)
             author = get_post_author(post)
+
+            # Make sure this was posted in the awards year
+            posted = post.find('span', class_="postdate old").get_text(strip=True)
+            datetimestring = posted + ' ' + get_timezone(soup)
+            posted_utc = parser.parse(datetimestring).astimezone(tz.tzutc())
+
+            print posted_utc
+            if not check_in_awards_year(int(settings.YEAR), posted_utc):
+                print 'Entered check_in_awards_year'
+                raise ValidationError(u"This fanfic is not eligible for this year's awards. Please nominate a story posted between 00:00 January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR))
+
         else:
             title = title_link.get_text(strip=True)
             author = get_post_author(soup.find(id="posts").li)
