@@ -319,7 +319,6 @@ class Fic(SerebiiObject, models.Model):
 
     @classmethod
     def from_soup(cls, soup, thread_id, post_id):
-        print 'Entering from_soup method'
         forum_link = soup.find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
         if forum_link['href'] not in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics'):
             raise ValidationError(u"This thread does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic.")
@@ -336,14 +335,80 @@ class Fic(SerebiiObject, models.Model):
             datetimestring = posted + ' ' + get_timezone(soup)
             posted_utc = parser.parse(datetimestring).astimezone(tz.tzutc())
 
-            print posted_utc
             if not check_in_awards_year(int(settings.YEAR), posted_utc):
-                print 'Entered check_in_awards_year'
                 raise ValidationError(u"This fanfic is not eligible for this year's awards. Please nominate a story posted between 00:00 January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR))
 
         else:
             title = title_link.get_text(strip=True)
             author = get_post_author(soup.find(id="posts").li)
+
+            # We need to check whether the 'fic was UPDATED in the  awards year
+            # First look at author's posts on the nominated page
+            # If any are from the awards year, we don't need to go further
+            user_tz = get_timezone(soup)
+            valid = False
+
+            postdates = soup.find_all('span', class_="postdate old")
+            usernames = soup.find_all('a', class_="username")
+
+            for index, user in enumerate(usernames):
+                if str(author) == user.get_text(strip=True):
+                    datetimestring = postdates[index].get_text(strip=True) + ' ' + user_tz
+                    posted_utc = parser.parse(datetimestring).astimezone(tz.tzutc())
+                    if check_in_awards_year(int(settings.YEAR), posted_utc):
+                        valid = True
+                        break
+
+                    if index == 0:
+                        # This is the author's first post on this page.
+                        # If this is also the first page of the thread,
+                        # and the post was made after the awards year,
+                        # the story cannot possibly be eligible.
+                        print 'First', datetimestring
+                        print posted_utc > datetime.datetime(int(settings.YEAR), 12, 31, 23, 59, tzinfo=tz.tzutc())
+                        try:
+                            if soup.find('span', class_="selected").get_text(strip=True) == '1':
+                                print 'First page'
+                        except AttributeError:
+                            pass
+
+                    if index == len(usernames) - 1:
+                        # This is the author's last post on this page.
+                        # If this is also the last page of the thread,
+                        # and the post was made before the awards year,
+                        # the story cannot possibly be eligible.
+                        print 'Last', datetimestring
+                        print posted_utc < datetime.datetime(int(settings.YEAR), 1, 1, 0, 0, tzinfo=tz.tzutc())
+                        try:
+                            print soup.find('form', class_='pagination').find('a', class_="popupctrl").get_text(strip=True)
+                        except AttributeError:
+                            # There are no other pages!
+                            # Since this is the last post,
+                            # and we've found no valid ones,
+                            # this thread is not eligible.
+                            print 'no further pages!'
+                            raise ValidationError(u"This fanfic is not eligible for this year's awards. Please nominate a story updated between 00:00 January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR))
+                          
+
+            if not valid:
+                # Are there any more pages in the thread?
+                # If not, this is the end of the line
+                if soup.find('span', class_="prev_next"):
+                    # Okay, is this the last (most recent) page?
+                    # If so, and all posts are pre-awards year,
+                    # it can't possibly be eligible
+
+                    # Is this the first (oldest) page?
+                    # If so, and all posts are post-awards year,
+                    # it also can't possibly be eligible
+
+                    # Nothing left to do but fetch all the user's posts
+                    # in the thread for the awards year
+                    pass
+                else:
+                    raise ValidationError(u"This fanfic is not eligible for this year's awards. Please nominate a story updated between 00:00 January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR))
+
+            raise ValidationError("Just so I don't have to keep deleting stuff from the database")
         if thread_id is None:
             thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
         obj = cls(title=title, thread_id=thread_id, post_id=post_id)
