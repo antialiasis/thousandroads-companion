@@ -66,6 +66,7 @@ class Award(models.Model):
     """
     category = models.ForeignKey(Category)
     name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
     has_person = models.BooleanField(default=False)
     has_fic = models.BooleanField(default=False)
     has_detail = models.BooleanField(default=False)
