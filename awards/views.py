@@ -82,12 +82,41 @@ class YearAwardsMassEditView(FormSetView):
         return context
 
 
-class NominationView(LoginRequiredMixin, FormSetView):
+class TempUserMixin(object):
+    def get_context_data(self, **kwargs):
+        if not self.request.user.is_authenticated():
+            return { 'form': kwargs.get('form', TempUserProfileForm()) }
+        else:
+            return super(TempUserMixin, self).get_context_data(**kwargs)
+
+    def post(self, *args, **kwargs):
+        if self.request.user.is_authenticated():
+            return super(TempUserMixin, self).post(*args, **kwargs)
+        else:
+            form = TempUserProfileForm(data=self.request.POST)
+            if form.is_valid():
+                user = form.create_temp_user()
+                login(self.request, user)
+                messages.success(self.request, mark_safe(u'You have now been logged in as a temporary user. %s' % self.temp_user_success_message))
+                return HttpResponseRedirect(self.get_success_url())
+            else:
+                return self.render_to_response(self.get_context_data(form=form))
+
+    def get(self, *args, **kwargs):
+        if self.request.user.is_authenticated():
+            return super(TempUserMixin, self).get(*args, **kwargs)
+        else:
+            form = TempUserProfileForm()
+            return self.render_to_response(self.get_context_data(form=form))
+
+
+class NominationView(TempUserMixin, FormSetView):
     form_class = NominationForm
     formset_class = BaseNominationFormSet
     extra = 0
     success_url = reverse_lazy('nomination')
     template_name = "nomination.html"
+    temp_user_success_message = 'After making your nominations, you <strong>must</strong> post in <a href="%s">the nomination thread on the forums</a> to confirm your identity.' % settings.NOMINATION_THREAD
 
     def get_formset_kwargs(self):
         kwargs = super(NominationView, self).get_formset_kwargs()
@@ -97,7 +126,8 @@ class NominationView(LoginRequiredMixin, FormSetView):
 
     def formset_valid(self, formset):
         formset.save()
-        messages.success(self.request, u"Your nominations have been saved. You may return here to edit your nominations at any point until the end of the nomination phase.")
+        msg = "You may return here at any point until the end of the nomination phase to change your nominations." if self.request.user.verified else 'Remember, in order for your nominations to be counted you must <strong>post in <a href="%s">the nomination thread</a></strong> to confirm that this is you!' % settings.NOMINATION_THREAD
+        messages.success(self.request, mark_safe(u"Your nominations have been saved. %s" % msg))
         return super(NominationView, self).formset_valid(formset)
 
     def get_context_data(self, **kwargs):
@@ -116,7 +146,8 @@ class AllNominationsView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(AllNominationsView, self).get_context_data(**kwargs)
-        context['nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR).values_list('username', flat=True).distinct()
+        context['nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR, user__verified=True).values_list('username', flat=True).distinct()
+        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR, user__verified=False).values_list('username', flat=True).distinct()
         return context
 
 
@@ -140,22 +171,16 @@ class AdminNominationView(NominationView):
         return super(AdminNominationView, self).dispatch(*args, **kwargs)
 
 
-class VotingView(FormView):
+class VotingView(TempUserMixin, FormView):
     form_class = VotingForm
     template_name = "voting.html"
     success_url = reverse_lazy('voting')
-
-    def get_form_class(self):
-        if self.request.user.is_authenticated():
-            return VotingForm
-        else:
-            return TempUserProfileForm
+    temp_user_success_message = 'After placing your votes, you <strong>must</strong> post in <a href="%s">the voting thread on the forums</a> to confirm your identity.' % settings.VOTING_THREAD
 
     def get_form_kwargs(self):
         kwargs = super(VotingView, self).get_form_kwargs()
-        if self.request.user.is_authenticated():
-            kwargs['year'] = settings.YEAR
-            kwargs['member'] = self.request.user.member
+        kwargs['year'] = settings.YEAR
+        kwargs['member'] = self.request.user.member
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -164,14 +189,9 @@ class VotingView(FormView):
         return context
 
     def form_valid(self, form):
-        if self.request.user.is_authenticated():
-            form.save()
-            msg = "You may return here at any point until the end of the voting phase to change your votes." if self.request.user.verified else 'Remember, in order for your votes to be counted you must <strong>post in <a href="%s">the voting thread</a></strong> to confirm that this is you!' % settings.VOTING_THREAD
-            messages.success(self.request, mark_safe(u"Your votes have been saved. %s Thank you for participating!" % msg))
-        else:
-            user = form.create_temp_user()
-            login(self.request, user)
-            messages.success(self.request, mark_safe(u'You have now been logged in as a temporary user. After placing your votes, you <strong>must</strong> post in <a href="%s">the voting thread on the forums</a> to confirm your identity.' % settings.VOTING_THREAD))
+        form.save()
+        msg = "You may return here at any point until the end of the voting phase to change your votes." if self.request.user.verified else 'Remember, in order for your votes to be counted you must <strong>post in <a href="%s">the voting thread</a></strong> to confirm that this is you!' % settings.VOTING_THREAD
+        messages.success(self.request, mark_safe(u"Your votes have been saved. %s Thank you for participating!" % msg))
         return super(VotingView, self).form_valid(form)
 
 

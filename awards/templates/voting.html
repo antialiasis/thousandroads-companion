@@ -9,8 +9,6 @@
 
 {% if not phase == 'voting' %}
 <p>The voting phase {% if not phase == 'finished' %}has not started. <a href="{% url 'nomination' %}">Click here to enter your nominations.</a>{% else %}is over. Come back in time for next year's awards!{% endif %}</p>
-{% elif user.is_authenticated and not user.member %}
-<p>To vote, you must <a href="{% url 'verification' %}">verify your account</a>.</p>
 {% elif not user.is_authenticated %}
 <p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to vote.</strong> Doing so will allow you to return at any time during the voting phase to change your votes if you so desire and eliminates the need to manually confirm your identity on the forums after voting.</p>
 
@@ -21,6 +19,8 @@
 {% include 'form.html' %}
 <p><button type="submit" class="btn btn-primary">Continue</button></p>
 </form>
+{% elif not user.member %}
+<p>To vote, you must <a href="{% url 'verification' %}">verify your account</a>.</p>
 {% else %}
 <p>Here, you can submit your votes for the {{year}} fanfic awards.</p>
 

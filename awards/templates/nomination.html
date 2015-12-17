@@ -9,7 +9,17 @@
 
 {% if not phase == 'nomination' %}
 <p>The nomination phase has concluded. {% if phase == 'voting' %}<a href="{% url 'voting' %}">Click here to vote for your favorites.</a>{% else %}Come back in time for next year's awards!{% endif %}</p>
-{% elif not user.verified %}
+{% elif not user.is_authenticated %}
+<p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to nominate.</strong> Doing so will allow you to return at any time during the nomination phase to change your nominations if you so desire and eliminates the need to manually confirm your identity on the forums after nominating.</p>
+
+<p>However, if you'd rather not register, it is also possible to nominate without it and be manually verified after submitting your nominations. To do so, enter the link to your Serebii.net forums user profile into the form field below and press Continue. You can get this link by clicking <a href="http://www.serebiiforums.com/member.php" target="_blank">here</a> and copying the address it redirects you to, provided you are logged in to the forums.</p>
+
+<form action="{% url 'nomination' %}" method="post">
+{% csrf_token %}
+{% include 'form.html' %}
+<p><button type="submit" class="btn btn-primary">Continue</button></p>
+</form>
+{% elif not user.member %}
 <p>To nominate, you must <a href="{% url 'verification' %}">verify your account</a>.</p>
 {% else %}
 
@@ -268,7 +278,7 @@ Please correct the errors below.
             $progress_list.append('<h4>Authors</h4>').append($author_list);
         }
         if (author_lis.length === 0 && fic_lis.length === 0) {
-            $progress_list.append(' Nothing yet');
+            $progress_list.append('<span> Nothing yet</span>');
         }
 
         // Make the nominations cycle through their actual nominations when clicked
