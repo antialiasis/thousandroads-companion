@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
@@ -146,8 +147,9 @@ class AllNominationsView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(AllNominationsView, self).get_context_data(**kwargs)
-        context['nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR, user__verified=True).values_list('username', flat=True).distinct()
-        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR, user__verified=False).values_list('username', flat=True).distinct()
+        verified_filter = Q(user__isnull=True) | Q(user__verified=True)
+        context['nominators'] = Member.objects.filter(verified_filter, nominations_by__year=settings.YEAR).values_list('username', flat=True).distinct()
+        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
         return context
 
 
@@ -224,6 +226,7 @@ class VotingStatsView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super(VotingStatsView, self).get_context_data(**kwargs)
-        context['voters'] = Member.objects.filter(votes__year=settings.YEAR, user__verified=True).values_list('username', flat=True).distinct()
-        context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR, user__verified=False).values_list('username', flat=True).distinct()
+        verified_filter = Q(user__isnull=True) | Q(user__verified=True)
+        context['voters'] = Member.objects.filter(verified_filter, votes__year=settings.YEAR).values_list('username', flat=True).distinct()
+        context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
         return context

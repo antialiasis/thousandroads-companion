@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 import bbcode
 from django.db import models
-from django.db.models import Count, Prefetch
+from django.db.models import Q, Count, Prefetch
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -174,7 +174,7 @@ class YearAward(YearlyData):
         return u"%s - %s awards" % (self.award, self.year)
 
     def get_nominations(self, with_votes=False):
-        nominations = Nomination.objects.from_year(self.year).filter(award=self.award, member__user__verified=True).distinct()
+        nominations = Nomination.objects.from_year(self.year).filter(Q(member__user__isnull=True) | Q(member__user__verified=True), award=self.award).distinct()
         if with_votes:
             nominations = nominations.prefetch_related(Prefetch('votes', Vote.objects.filter(member__user__verified=True).distinct()))
             nominations = sorted(nominations, key=lambda nomination: len(nomination.votes.all()), reverse=True)
