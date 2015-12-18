@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 import bbcode
+from datetime import datetime
 from django.db import models
 from django.db.models import Q, Count, Prefetch
 from django.conf import settings
@@ -9,6 +10,55 @@ from serebii.models import Member, Fic
 
 
 CURRENT_YEAR = settings.YEAR
+
+
+class Phase(object):
+    """
+    Simple helper class to keep track of phases. Mostly here for the
+    implementation of __cmp__, which allows us to compare phases
+    chronologically (for instance, nomination < voting).
+
+    """
+    _phases = [None, 'nomination', 'voting', 'finished']
+
+    def __init__(self, phase):
+        if phase in self._phases:
+            self.phase = phase
+        else:
+            raise ValueError(u"%s is not a valid phase." % phase)
+
+    def __cmp__(self, other):
+        if not isinstance(other, Phase):
+            other = Phase(other)
+        return cmp(self._phases.index(self.phase), self._phases.index(other.phase))
+
+    def __unicode__(self):
+        return self.phase
+
+    def __str__(self):
+        return self.phase
+
+    def __hash__(self):
+        return hash(self.phase)
+
+    def __nonzero__(self):
+        return bool(self.phase)
+
+    @classmethod
+    def get_current(cls):
+        try:
+            return cls(settings.PHASE)
+        except AttributeError:
+            # Determine the phase by the current date and the deadline settings
+            now = datetime.utcnow()
+
+            if settings.VOTING_END and now > settings.VOTING_END:
+                return cls('finished')
+            if settings.VOTING_START and now > settings.VOTING_START:
+                return cls('voting')
+            if settings.NOMINATION_START and now > settings.NOMINATION_START:
+                return cls('nomination')
+            return cls(None)
 
 
 class YearlyManager(models.Manager):

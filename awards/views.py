@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.conf import settings
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.core.exceptions import PermissionDenied
@@ -13,7 +14,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
-from awards.models import YearAward
+from awards.models import YearAward, Phase
 from serebii.models import Member, Fic
 from serebii.forms import TempUserProfileForm
 
@@ -21,12 +22,16 @@ from serebii.forms import TempUserProfileForm
 def awards_context(request):
     return {
         'year': settings.YEAR,
-        'phase': settings.PHASE,
+        'phase': Phase.get_current(),
         'min_year': settings.MIN_YEAR,
         'max_year': settings.MAX_YEAR,
         'max_fic_nominations': settings.MAX_FIC_NOMINATIONS,
         'max_person_nominations': settings.MAX_PERSON_NOMINATIONS,
-        'min_different_nominations': settings.MIN_DIFFERENT_NOMINATIONS
+        'min_different_nominations': settings.MIN_DIFFERENT_NOMINATIONS,
+        'discussion_thread': settings.DISCUSSION_THREAD,
+        'nomination_thread': settings.NOMINATION_THREAD,
+        'voting_thread': settings.VOTING_THREAD,
+        'results_thread': settings.RESULTS_THREAD
     }
 
 

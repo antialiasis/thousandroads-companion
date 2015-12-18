@@ -5,6 +5,8 @@ Django settings for sppfawards project.
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+from datetime import datetime
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'insecure_default_key')
@@ -68,7 +70,13 @@ MAX_YEAR = 2015  # This should be changed every year
 
 YEAR = int(os.environ.get('YEAR', MAX_YEAR))
 
-PHASE = os.environ.get('PHASE', None)  # Can be 'nomination', 'voting', 'finished' or None
+def parse_environ_date(key):
+    environ_date = os.environ.get(key, None)
+    return datetime.striptime(environ_date, '%Y-%m-%d') if environ_date is not None else None
+
+NOMINATION_START = parse_environ_date('NOMINATION_START')
+VOTING_START = parse_environ_date('VOTING_START')
+VOTING_END = parse_environ_date('VOTING_END')
 
 DISCUSSION_THREAD = os.environ.get('DISCUSSION_THREAD', '')
 NOMINATION_THREAD = os.environ.get('NOMINATION_THREAD', '')

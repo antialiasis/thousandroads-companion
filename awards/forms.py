@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.forms.formsets import BaseFormSet
 from django.utils.html import mark_safe
-from awards.models import Award, YearAward, Nomination, Vote
+from awards.models import Award, YearAward, Nomination, Vote, Phase
 from serebii.models import Member, MemberPage, Fic, FicPage
 from serebii.forms import SerebiiLinkField
 
@@ -276,6 +276,11 @@ class BaseNominationFormSet(BaseFormSet):
         return super(BaseNominationFormSet, self)._construct_form(i, **defaults)
 
     def clean(self):
+        phase = Phase.get_current()
+        if phase > 'nomination':
+            raise ValidationError(u"The nomination phase has ended! Better luck next year.")
+        elif phase < 'nomination':
+            raise ValidationError(u"The nomination phase hasn't started yet! Have patience until nominations open.")
         # By this point all nominations will have been saved to the
         # database, so we can safely assume they have PKs.
         fic_nominations = defaultdict(int)
@@ -344,6 +349,12 @@ class VotingForm(forms.Form):
                 self.fields['award_%s' % year_award.award.pk] = field
 
     def clean(self):
+        phase = Phase.get_current()
+        if phase > 'voting':
+            raise ValidationError(u"The voting phase has ended! Better luck next year.")
+        elif phase < 'voting':
+            raise ValidationError(u"The voting phase hasn't started yet! Have patience until voting opens.")
+
         votes = []
         for field in self.fields:
             vote = self.cleaned_data.get(field)
@@ -351,11 +362,11 @@ class VotingForm(forms.Form):
                 vote_obj = Vote(member=self.member, year=self.year, award_id=self.fields[field].award.pk, nomination=vote)
                 try:
                     vote_obj.clean()
-                except forms.ValidationError as e:
+                except ValidationError as e:
                     self.add_error(field, e)
                 votes.append(vote_obj)
         if len(votes) * 2 < len(self.fields):
-            raise forms.ValidationError(u"You must place a vote in at least half of the available categories.")
+            raise ValidationError(u"You must place a vote in at least half of the available categories.")
         return self.cleaned_data
 
     def save(self, commit=True):

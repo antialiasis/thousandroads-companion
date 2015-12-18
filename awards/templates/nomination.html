@@ -8,7 +8,7 @@
 <h1>Nominations</h1>
 
 {% if not phase == 'nomination' %}
-<p>The nomination phase has concluded. {% if phase == 'voting' %}<a href="{% url 'voting' %}">Click here to vote for your favorites.</a>{% else %}Come back in time for next year's awards!{% endif %}</p>
+<p>The nomination phase has {% if phase < 'nomination' %}not yet started{% else %}concluded{% endif %}. {% if phase == 'voting' %}<a href="{% url 'voting' %}">Click here to vote for your favorites.</a>{% elif phase < 'nomination' %}Keep an eye out for news of when nominations start!{% else %}Come back in time for next year's awards!{% endif %}</p>
 {% elif not user.is_authenticated %}
 <p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to nominate.</strong> Doing so will allow you to return at any time during the nomination phase to change your nominations if you so desire and eliminates the need to manually confirm your identity on the forums after nominating.</p>
 

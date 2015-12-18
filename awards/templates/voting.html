@@ -8,7 +8,7 @@
 <h1>Voting</h1>
 
 {% if not phase == 'voting' %}
-<p>The voting phase {% if not phase == 'finished' %}has not started. <a href="{% url 'nomination' %}">Click here to enter your nominations.</a>{% else %}is over. Come back in time for next year's awards!{% endif %}</p>
+<p>The voting phase {% if phase < 'voting' %}has not started.{% if phase == 'nomination' %} <a href="{% url 'nomination' %}">Click here to enter your nominations.</a>{% endif %}{% else %}is over. Come back in time for next year's awards!{% endif %}</p>
 {% elif not user.is_authenticated %}
 <p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to vote.</strong> Doing so will allow you to return at any time during the voting phase to change your votes if you so desire and eliminates the need to manually confirm your identity on the forums after voting.</p>
 
