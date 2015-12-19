@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.forms.formsets import BaseFormSet
 from django.utils.html import mark_safe
-from awards.models import Award, YearAward, Nomination, Vote, Phase
+from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR
 from serebii.models import Member, MemberPage, Fic, FicPage
 from serebii.forms import SerebiiLinkField
 
@@ -102,6 +102,27 @@ class SerebiiObjectWidget(forms.MultiWidget):
         return '<span class="serebii-object">%s</span>' % ' '.join(rendered_widgets)
 
 
+class SerebiiObjectSelect(forms.Select):
+    """
+    A customized Select that restricts the actual choices given to
+    those already nominated this year and the given value (if it
+    exists).
+
+    """
+    def __init__(self, object_class, *args, **kwargs):
+        self.object_class = object_class
+        super(SerebiiObjectSelect, self).__init__(*args, **kwargs)
+
+    def render(self, name, value, attrs=None, choices=()):
+        if value and value not in (choice[0] for choice in self.choices):
+            # The defined value is not in the available choices - check if it's a valid fic/member
+            selected_object = self.object_class.objects.filter(pk=value).first()
+            if selected_object:
+                # We have a submitted value that's the PK for a fic/member - include that fic/member as a choice
+                choices = ((selected_object.pk, unicode(selected_object)),)
+        return super(SerebiiObjectSelect, self).render(name, value, attrs, choices=choices)
+
+
 class SerebiiObjectField(forms.MultiValueField):
     """
     A field for entering a fic or member on Serebii.
@@ -114,8 +135,12 @@ class SerebiiObjectField(forms.MultiValueField):
         # MultiValueField's clean() won't stop us in our tracks later.
         self.really_required = kwargs.pop('required', True)
         self.object_class = page_class.object_class
+        # The actual field's queryset argument needs to be the entire collection of fics/members...
+        object_dropdown = forms.ModelChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class))
+        # ...but we must limit the choices instead to make sure the dropdown only has the objects nominated this year
+        object_dropdown.widget.choices = [('', object_dropdown.empty_label)] + [(obj.pk, unicode(obj)) for obj in self.object_class.objects.nominated_in_year(CURRENT_YEAR)]
         fields = [
-            forms.ModelChoiceField(queryset=self.object_class.objects.all()),
+            object_dropdown,
             SerebiiLinkField(page_class)
         ]
         super(SerebiiObjectField, self).__init__(fields, *args, required=False, **kwargs)

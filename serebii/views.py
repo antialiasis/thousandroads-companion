@@ -120,11 +120,13 @@ class SerebiiObjectLookupView(JSONViewMixin, View):
             context = {'error': e.message}
         else:
             if isinstance(self.object, Fic):
-                other_objects = [{'type': 'nominee', 'pk': author.pk, 'name': unicode(author), 'object': {'username': author.username}} for author in self.object.authors.all()]
+                other_objects = [author.to_dict() for author in self.object.authors.all()]
             else:
                 other_objects = []
+
             if self.object is None:
                 context = {'error': u"Lookup failed. Please double-check that you entered a valid URL."}
             else:
-                context = {'pk': self.object.pk, 'name': unicode(self.object), 'object': {'title': self.object.title, 'authors': [author.pk for author in self.object.authors.all()]}, 'other_objects': other_objects}
+                context = self.object.to_dict()
+                context['other_objects'] = other_objects
         return self.render_to_json_response(context)

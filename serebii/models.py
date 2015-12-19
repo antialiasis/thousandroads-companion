@@ -2,6 +2,7 @@
 import re
 import requests
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import logout
@@ -153,15 +154,25 @@ class SerebiiObject(object):
         return page_class(self)
 
 
+class MemberManager(models.Manager):
+    def nominated_in_year(self, year):
+        return self.get_queryset().filter(Q(nominations__year=year) | Q(fics__nominations__year=year)).distinct()
+
+
 class Member(SerebiiObject, models.Model):
     user_id = models.PositiveIntegerField(unique=True, primary_key=True)
     username = models.CharField(max_length=50)
+
+    objects = MemberManager()
 
     class Meta:
         ordering = ['username']
 
     def __unicode__(self):
         return self.username
+
+    def to_dict(self):
+        return {'type': 'nominee', 'pk': self.pk, 'name': unicode(self), 'object': {'username': self.username}}
 
     def link(self):
         return u"http://www.serebiiforums.com/member.php?%s" % self.user_id
@@ -236,6 +247,9 @@ class FicManager(models.Manager):
     def get_queryset(self):
         return super(FicManager, self).get_queryset().prefetch_related('authors')
 
+    def nominated_in_year(self, year):
+        return self.get_queryset().filter(nominations__year=year).distinct()
+
 
 class Fic(SerebiiObject, models.Model):
     """
@@ -248,7 +262,7 @@ class Fic(SerebiiObject, models.Model):
 
     """
     title = models.CharField(max_length=255)
-    authors = models.ManyToManyField(Member)
+    authors = models.ManyToManyField(Member, related_name='fics')
     thread_id = models.PositiveIntegerField()
     post_id = models.PositiveIntegerField(blank=True, null=True)
 
@@ -266,6 +280,9 @@ class Fic(SerebiiObject, models.Model):
         else:
             authors = [author.username for author in self._authors]
         return u"%s by %s" % (self.title, pretty_join(authors))
+
+    def to_dict(self):
+        return {'type': 'fic', 'pk': self.pk, 'name': unicode(self), 'object': {'title': self.title, 'authors': [author.pk for author in self.authors.all()]}}
 
     def link(self):
         if self.post_id:
