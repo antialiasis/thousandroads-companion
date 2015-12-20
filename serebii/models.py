@@ -44,8 +44,18 @@ def get_user_post_times(soup, author):
 
     return userposts
 
+
 def validate_fic_page(year, posts):
     return any([check_in_awards_year(year, date) for date in posts])
+
+
+def get_timezone(page):
+    tz_text = page.find('div', id="footer_time").get_text()
+    tz_bits = tz_text.split(' ')
+    tz = tz_bits[4][:-1]
+
+    tz = '{}{:0>2d}00'.format(tz[0], int(tz[1:]))
+    return tz
 
 
 def pretty_join(items, word='and'):
@@ -64,15 +74,6 @@ def get_post_author(post):
     username = user_link.strong.get_text(strip=True)
     user_id = MemberPage.get_params_from_url(user_link['href'])['user_id']
     return Member(user_id=user_id, username=username)
-
-
-def get_timezone(page):
-    tz_text = page.find('div', id="footer_time").get_text()
-    tz_bits = tz_text.split(' ')
-    tz = tz_bits[4][:-1]
-
-    tz = '{}{:0>2d}00'.format(tz[0], int(tz[1:]))
-    return tz
 
 
 class SerebiiPage(object):
