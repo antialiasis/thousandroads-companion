@@ -81,9 +81,9 @@ class SerebiiPage(object):
         Extracts relevant parameters from a Serebii URL.
 
         """
-        url_regex = re.compile(r'^(?:http:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?%s' % (cls.page, cls.object_id_regex), re.U)
+        url_regex = re.compile(r'^(?:http:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?(%s)' % (cls.page, cls.object_id_regex), re.U)
         match = url_regex.match(url)
-        if match is None:
+        if match is None or not match.group(1): # The URL is invalid if the object ID match is zero-length
             raise ValueError(u"Invalid %s URL." % cls.__name__)
         else:
             return match.groupdict()
@@ -318,20 +318,28 @@ class Fic(SerebiiObject, models.Model):
 
     @classmethod
     def from_soup(cls, soup, thread_id, post_id):
+        if thread_id is None and post_id is None:
+            raise ValidationError(u"You chose to nominate the thread, but you've entered a link to a post with no thread ID. Please enter a thread link.")
+
         forum_link = soup.find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
         if forum_link['href'] not in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics'):
             raise ValidationError(u"This thread does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic.")
+
         title_link = soup.find('span', class_="threadtitle").a
-        if post_id is not None and False:  # TODO: make it actually possible to nominate individual posts
-            # The fic starts in a particular post
+
+        if post_id is not None:
+            # The fic starts in a particular post - use the author of the post and a placeholder title
             post = soup.find(id="post_%s" % post_id)
-            title = post.find('h2', class_="posttitle").get_text(strip=True)
+            title = "%s - post %s" % (title_link.get_text(strip=True), post_id)
             author = get_post_author(post)
         else:
+            # The fic is a thread - use the thread title and the author of the first post
             title = title_link.get_text(strip=True)
             author = get_post_author(soup.find(id="posts").li)
+
         if thread_id is None:
             thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
+
         obj = cls(title=title, thread_id=thread_id, post_id=post_id)
         obj._authors = [author]
         return obj
@@ -339,5 +347,16 @@ class Fic(SerebiiObject, models.Model):
 
 class FicPage(SerebiiPage):
     page = 'showthread'
-    object_id_regex = r'(?:(?:t=)?(?P<thread_id>\d+)[^&]*)?(?:&p=(?P<post_id>\d+))?'
+    # This really gnarly regex matches URL queries for threads/posts including
+    # - t=<threadid>
+    # - t=<threadid>&p=<postid>
+    # - p=<postid>
+    # - <threadid>
+    # - <threadid>&p=<postid>
+    # - <threadid>-Fic-title
+    # - <threadid>-Fic-title&p=<postid>
+    # ...which should cover every sensible URL a person could enter for a
+    # Serebii thread/post. It will technically also match an empty query
+    # string, but we can handle that case separately.
+    object_id_regex = r'(?:(?:t=)?(?P<thread_id>\d+)[^&]*)?(?:(?(thread_id)&)p=(?P<post_id>\d+))?'
     object_class = Fic

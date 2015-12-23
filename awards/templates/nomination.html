@@ -104,6 +104,8 @@ Please correct the errors below.
         }
     }).change();
 
+    $(".is-post-link").hide();
+
     function resize_textarea() {
         if ($(this).val().length > 40 || $(this).val().indexOf('\n') !== -1) {
             $(this).removeClass("shrunk");
@@ -161,11 +163,15 @@ Please correct the errors below.
         }
     }
 
-    function lookup($elem, lookup_type) {
-        $elem.next(".loading").remove();
+    function lookup($elem, lookup_type, params) {
+        if (!params) params = {};
+
+        $elem.next(".loading, .text-warning").remove();
+        
         if ($elem.val() !== '') {
             $elem.after(' <span class="loading"><img src="{{STATIC_URL}}ajax-loader.gif" alt=""> Looking up URL...</span>');
-            $.get(lookup_urls[lookup_type], {url: $.trim($elem.val())}, function(json) {
+            params.url = $.trim($elem.val());
+            $.get(lookup_urls[lookup_type], params, function(json) {
                 if ('error' in json) {
                     $elem.next(".loading").text(json.error).addClass("text-danger");
                 }
@@ -327,8 +333,15 @@ Please correct the errors below.
     }
     update_progress();
 
-    $(".field-fic input").blur(function() {
-        lookup($(this), 'fic');
+    $(".field-fic input[type=text]").blur(function() {
+        if ($(this).val().indexOf('p=') !== -1) {
+            // This is a post link
+            $(this).next(".loading, .text-warning").remove();
+            $(this).after('<span class="text-warning">You have entered a post link. By default, the system assumes your nomination is for the thread containing the post. If you wish to nominate an independent story located in the particular post you linked to, please click the appropriate button. <button type="button" class="btn btn-default btn-sm post-link-button" value="thread">Nominate the thread</button> <button type="button" class="btn btn-default btn-sm post-link-button" value="post">Nominate the post</button></span>');
+        }
+        else {
+            lookup($(this), 'fic');
+        }
     });
 
     $(".field-nominee input").blur(function() {
@@ -336,5 +349,9 @@ Please correct the errors below.
     });
 
     $(".field-fic select, .field-nominee select").change(update_progress);
+
+    $(".field-fic").on('click', ".post-link-button", function() {
+        lookup($(this).closest(".field-fic").find("input[type=text]"), 'fic', { type: this.value });
+    });
 </script>
 {% endblock %}

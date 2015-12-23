@@ -101,7 +101,7 @@ class SerebiiObjectLookupView(JSONViewMixin, View):
 
     def get_object(self):
         try:
-            url = self.request.GET.get('url')
+            url = self.request.GET['url']
         except KeyError:
             return None
 
@@ -111,8 +111,10 @@ class SerebiiObjectLookupView(JSONViewMixin, View):
             params = page_class.get_params_from_url(url)
         except ValueError:
             return None
+        if self.model == Fic and self.request.GET.get('type', 'thread') == 'thread':
+            params['post_id'] = None
         return self.model.from_params(save=True, **params)
-        
+
     def get(self, *args, **kwargs):
         try:
             self.object = self.get_object()

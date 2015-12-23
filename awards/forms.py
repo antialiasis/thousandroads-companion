@@ -83,22 +83,33 @@ class SerebiiObjectWidget(forms.MultiWidget):
     field into which a link can be entered.
 
     """
+    def __init__(self, object_class, *args, **kwargs):
+        self.object_class = object_class
+        super(SerebiiObjectWidget, self).__init__(*args, **kwargs)
+
     def decompress(self, value):
         if value:
             # Value should be a Fic object or a Member object
-            if isinstance(value, Fic) or isinstance(value, Member):
+            if isinstance(value, self.object_class):
                 if value.pk is not None:
                     # An existing fic/member: select that fic/member in the first subwidget
-                    return [value.pk, '']
+                    decompressed = [value.pk, '']
                 else:
                     # A not-yet-existing fic/member: put its link in the second widget
-                    return [None, value.link()]
+                    decompressed = [None, value.link()]
             else:
                 # value is probably a primary key
-                return [value, '']
-        return [None, '']
+                decompressed = [value, '']
+        else:
+            decompressed = [None, '']
+        if self.object_class == Fic:
+            # Add an appropriate value for the post link field.
+            decompressed.append(bool(isinstance(value, Fic) and value.post_id))
+        return decompressed
 
     def format_output(self, rendered_widgets):
+        if len(rendered_widgets) >= 3:
+            rendered_widgets[2] = '<span class="is-post-link">Is this a single-post fic? %s <span class="help-text">Check this box if the fic does not have a thread to itself, but rather lives in the specific post you linked.</span></span>' % rendered_widgets[2]
         return '<span class="serebii-object">%s</span>' % ' '.join(rendered_widgets)
 
 
@@ -128,7 +139,7 @@ class SerebiiObjectField(forms.MultiValueField):
     A field for entering a fic or member on Serebii.
 
     """
-    empty_values = [None, '', ['', '']]
+    empty_values = [None, '', ['', ''], ['', '', False]]
 
     def __init__(self, page_class, *args, **kwargs):
         # Must pretend the field isn't required even if it is, so that
@@ -143,9 +154,11 @@ class SerebiiObjectField(forms.MultiValueField):
             object_dropdown,
             SerebiiLinkField(page_class)
         ]
+        if self.object_class == Fic:
+            fields.append(forms.BooleanField(required=False))
         super(SerebiiObjectField, self).__init__(fields, *args, required=False, **kwargs)
 
-        self.widget = SerebiiObjectWidget([field.widget for field in self.fields])
+        self.widget = SerebiiObjectWidget(self.object_class, [field.widget for field in self.fields])
 
     def validate(self, value):
         # Validate requiredness, since we bypass MultiValueField's
@@ -169,6 +182,19 @@ class SerebiiObjectField(forms.MultiValueField):
         return value
 
     def clean(self, value):
+        if self.object_class == Fic and value[1] and not value[2]:
+            # We have a link, and we haven't checked the post link box - make
+            # sure the link is a thread link
+            try:
+                params = FicPage.get_params_from_url(value[1])
+            except ValueError:
+                raise ValidationError(u"Invalid Fic URL. Please enter the full URL to a thread or post on the Serebii.net forums.")
+            thread_id = params.get('thread_id')
+            if not thread_id:
+                # We don't actually have a thread ID
+                raise ValidationError(u"You have entered a link to a post with no thread ID, but not checked the single-post fic box. Please enter a thread link.")
+            # Set the link to the thread link instead of the post before we clean
+            value[1] = Fic(thread_id=thread_id).link()
         # Just save during clean - having more fics/members in the
         # database can only be a good thing.
         value = super(SerebiiObjectField, self).clean(value)
