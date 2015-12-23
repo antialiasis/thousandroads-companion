@@ -1,13 +1,88 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
+from datetime import datetime, date, timedelta
+from dateutil import parser, tz
 from django.db import models
 from django.db.models import Q
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import logout
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 from bs4 import BeautifulSoup
+
+
+ELIGIBILITY_START = datetime(int(settings.YEAR), 1, 1, 0, 0, tzinfo=timezone.utc)
+ELIGIBILITY_END = datetime(int(settings.YEAR) + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+ELIGIBILITY_ERROR_MESSAGE = u"This fanfic is not eligible for this year's awards. Please nominate a story posted/updated between 00:00 UTC January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR)
+
+
+def check_in_awards_year(year, date):
+    if date < ELIGIBILITY_END and date >= ELIGIBILITY_START:
+        return True
+    else:
+        return False
+
+
+def get_datetime_from_postdate(postdate, forum_time, tz_offset):
+    # First we have to get rid of "Yesterday" or "Today"
+    tz_string = get_tz_string(tz_offset)
+
+    now = timezone.now().astimezone(tz.tzoffset(None, tz_offset * 60 * 60))
+    if forum_time.hour == 23 and now.hour == 0:
+        # The forum time is actually still on the previous day
+        forum_today = now.date() - timedelta(days=1)
+    elif forum_time.hour == 0 and now.hour == 23:
+        # The forum time is on the next day
+        forum_today = now.date() + timedelta(days=1)
+    else:
+        forum_today = now.date()
+
+    if 'Yesterday' in postdate:
+        yesterday = forum_today - timedelta(days=1)
+        datebit = yesterday.strftime('%d/%m/%Y')
+        postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
+    if 'Today' in postdate:
+        datebit = forum_today.strftime('%d/%m/%Y')
+        postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
+
+    print postdate, tz_string
+
+    return parser.parse('{} {}'.format(postdate, tz_string)).astimezone(timezone.utc) 
+
+
+def get_user_post_times(soup, author):
+    usernames = soup.find_all('a', class_="username")
+    postdates = soup.find_all('span', class_="postdate")
+
+    forum_time, tz_offset = get_forum_time_info(soup)
+
+    userposts = [get_datetime_from_postdate(posted.get_text(strip=True), forum_time, tz_offset) for user, posted in zip(usernames, postdates) if author == user.get_text(strip=True)]
+
+    return userposts
+
+
+def validate_fic_page(year, posts):
+    return any(check_in_awards_year(year, date) for date in posts)
+
+
+def get_forum_time_info(page):
+    time_text = page.find('div', id="footer_time").get_text()
+    sentences = time_text.split('.')
+
+    tz_sentence = sentences[0]
+    offset = tz_sentence.split(' ')[-1]
+    offset = 0 if offset == 'GMT' else int(offset)
+
+    time_sentence = sentences[1]
+    time = ' '.join(time_sentence.split(' ')[-2:])
+
+    return (parser.parse(time), offset)
+
+
+def get_tz_string(offset):
+    return '{:0=+3d}00'.format(offset)
 
 
 def pretty_join(items, word='and'):
@@ -332,13 +407,77 @@ class Fic(SerebiiObject, models.Model):
             post = soup.find(id="post_%s" % post_id)
             title = "%s - post %s" % (title_link.get_text(strip=True), post_id)
             author = get_post_author(post)
+
+            # Make sure this was posted in the awards year
+            forum_time, tz_offset = get_forum_time_info(soup)
+            posted = post.find('span', class_="postdate").get_text(strip=True)
+            posted_utc = get_datetime_from_postdate(posted, forum_time, tz_offset)
+
+            if not check_in_awards_year(int(settings.YEAR), posted_utc):
+                raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
         else:
             # The fic is a thread - use the thread title and the author of the first post
             title = title_link.get_text(strip=True)
             author = get_post_author(soup.find(id="posts").li)
 
-        if thread_id is None:
-            thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
+            if thread_id is None:
+                thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
+
+            # We need to check whether the 'fic was UPDATED in the  awards year
+            # First look at author's posts on the nominated page
+            # If any are from the awards year, we don't need to go further
+            userposts = get_user_post_times(soup, str(author))
+
+            if not validate_fic_page(int(settings.YEAR), userposts):
+                if not soup.find('span', class_="selected"):
+                    # This is the only page!
+                    # The story can't possibly be eligible.
+                    raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
+                elif not soup.find('img', alt="Previous"):
+                    # This is the first page!
+                    if userposts[0] >= ELIGIBILITY_END:
+                        # If the first post was made after the end of the awards year,
+                        # the story can't possibly be eligible.
+                        raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
+                elif not soup.find('img', alt='Next'):
+                    # This is the last page!
+                    # I don't believe this should be able to happen
+                    # But just in case...
+                    if userposts[-1] < ELIGIBILITY_START:
+                        # If the last post was made before the beginning of the awards year,
+                        # the story can't possibly be eligible.
+                        raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
+                # Nothing for it but to start working backward through the thread
+                # First, fetch the last page if we aren't there already
+                lastimg = soup.find('img', alt='Last')
+
+                if lastimg:
+                    nextlink = lastimg.parent['href']
+                    pagenum = int(nextlink[nextlink.rfind('page') + 4:])
+                else:
+                    # We start at this page - 1
+                    pagenum = int(soup.find('span', class_="selected").get_text(strip=True))
+                    nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
+
+                while pagenum > 0:
+                    soup = get_soup('http://www.serebiiforums.com/{}'.format(nextlink))
+                    userposts = get_user_post_times(soup, str(author))
+
+                    if not validate_fic_page(int(settings.YEAR), userposts):
+                        # If the author's first post on this page is from before the awards year,
+                        # the story can't possibly be eligible.
+                        if userposts[0] < ELIGIBILITY_START:
+                            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
+                        nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
+                        pagenum -= 1
+
+                    else:
+                        break
 
         obj = cls(title=title, thread_id=thread_id, post_id=post_id)
         obj._authors = [author]
