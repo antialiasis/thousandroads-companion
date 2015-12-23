@@ -196,21 +196,25 @@ class SerebiiObject(object):
         return cls(**kwargs)
 
     @classmethod
-    def from_params(cls, save=False, **kwargs):
+    def from_params(cls, save=False, force_download=False, **kwargs):
         """
         Returns an object corresponding to the given params.
 
         """
-        try:
-            # See if we can get the object from the database just from the parameters
-            return cls.objects.get(**kwargs)
-        except (cls.DoesNotExist, cls.MultipleObjectsReturned):
-            # Either this doesn't exist in the database or we can't uniquely determine the
-            # object from the URL parameters, so fetch it from the forums instead.
-            obj = cls.from_soup(get_soup(cls(**kwargs).link()), **kwargs)
-            if save:
-                obj.save()
-            return obj
+        if not force_download:
+            try:
+                # See if we can get the object from the database just from the
+                # parameters
+                return cls.objects.get(**kwargs)
+            except (cls.DoesNotExist, cls.MultipleObjectsReturned):
+                pass
+        # Either this doesn't exist in the database, we can't uniquely
+        # determine the object from the URL parameters, or we want to force
+        # downloading, so fetch it from the forums instead.
+        obj = cls.from_soup(get_soup(cls(**kwargs).link()), **kwargs)
+        if save:
+            obj.save()
+        return obj
 
     @classmethod
     def get_page_class(self):
@@ -402,6 +406,9 @@ class Fic(SerebiiObject, models.Model):
 
         title_link = soup.find('span', class_="threadtitle").a
 
+        if thread_id is None:
+            thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
+
         if post_id is not None:
             # The fic starts in a particular post - use the author of the post and a placeholder title
             post = soup.find(id="post_%s" % post_id)
@@ -420,9 +427,6 @@ class Fic(SerebiiObject, models.Model):
             # The fic is a thread - use the thread title and the author of the first post
             title = title_link.get_text(strip=True)
             author = get_post_author(soup.find(id="posts").li)
-
-            if thread_id is None:
-                thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
 
             # We need to check whether the 'fic was UPDATED in the  awards year
             # First look at author's posts on the nominated page
