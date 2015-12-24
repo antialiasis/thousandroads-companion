@@ -47,8 +47,6 @@ def get_datetime_from_postdate(postdate, forum_time, tz_offset):
         datebit = forum_today.strftime('%d/%m/%Y')
         postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
 
-    print postdate, tz_string
-
     return parser.parse('{} {}'.format(postdate, tz_string)).astimezone(timezone.utc) 
 
 
@@ -196,21 +194,25 @@ class SerebiiObject(object):
         return cls(**kwargs)
 
     @classmethod
-    def from_params(cls, save=False, force_download=False, **kwargs):
+    def from_params(cls, save=False, **kwargs):
         """
         Returns an object corresponding to the given params.
 
         """
-        if not force_download:
-            try:
-                # See if we can get the object from the database just from the
-                # parameters
-                return cls.objects.get(**kwargs)
-            except (cls.DoesNotExist, cls.MultipleObjectsReturned):
-                pass
-        # Either this doesn't exist in the database, we can't uniquely
-        # determine the object from the URL parameters, or we want to force
-        # downloading, so fetch it from the forums instead.
+        try:
+            # See if we can get the object from the database just from the
+            # parameters
+            obj = cls.objects.get(**kwargs)
+            if obj.can_skip_download():
+                # Only return the existing object if it's been nominated this
+                # year; otherwise we want to fetch it from the forums to
+                # validate it
+                return obj
+        except (cls.DoesNotExist, cls.MultipleObjectsReturned):
+            pass
+        # Either this doesn't exist in the database or we can't uniquely
+        # determine the object from the URL parameters, so fetch it from the
+        # forums instead.
         obj = cls.from_soup(get_soup(cls(**kwargs).link()), **kwargs)
         if save:
             obj.save()
@@ -231,6 +233,9 @@ class SerebiiObject(object):
         """
         page_class = self.__class__.get_page_class()
         return page_class(self)
+
+    def can_skip_download(self):
+        return True
 
 
 class MemberManager(models.Manager):
@@ -394,6 +399,10 @@ class Fic(SerebiiObject, models.Model):
                 author.save()
             existing_authors = self.authors.all()
             self.authors.add(*[author for author in self._authors if author not in existing_authors])
+
+    def can_skip_download(self):
+        from awards.models import Nomination
+        return Nomination.objects.from_year().filter(fic=obj).exists()
 
     @classmethod
     def from_soup(cls, soup, thread_id, post_id):

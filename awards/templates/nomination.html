@@ -97,7 +97,7 @@ Please correct the errors below.
     }).children("select").change(function() {
         if ($(this).val() !== "") {
             // We've chosen a fic in the select menu - hide the input field
-            $(this).siblings("input").hide();
+            $(this).siblings("input").val("").hide().next(".text-danger, .text-warning").remove();
         }
         else {
             $(this).siblings("input").show();
@@ -166,7 +166,7 @@ Please correct the errors below.
     function lookup($elem, lookup_type, params) {
         if (!params) params = {};
 
-        $elem.next(".loading, .text-warning").remove();
+        $elem.next(".loading").remove();
         
         if ($elem.val() !== '') {
             $elem.after(' <span class="loading"><img src="{{STATIC_URL}}ajax-loader.gif" alt=""> Looking up URL...</span>');
@@ -336,8 +336,8 @@ Please correct the errors below.
     $(".field-fic input[type=text]").blur(function() {
         if ($(this).val().indexOf('p=') !== -1) {
             // This is a post link
-            $(this).next(".loading, .text-warning").remove();
-            $(this).after('<span class="text-warning">You have entered a post link. By default, the system assumes your nomination is for the thread containing the post. If you wish to nominate an independent story located in the particular post you linked to, please click the appropriate button. <button type="button" class="btn btn-default btn-sm post-link-button" value="thread">Nominate the thread</button> <button type="button" class="btn btn-default btn-sm post-link-button" value="post">Nominate the post</button></span>');
+            $(this).next(".loading").remove();
+            $(this).after('<span class="loading text-warning">You have entered a post link. By default, the system assumes your nomination is for the thread containing the post. If you wish to nominate an independent story located in the particular post you linked to, please click the appropriate button. <button type="button" class="btn btn-default btn-sm post-link-button" value="thread">Nominate the thread</button> <button type="button" class="btn btn-default btn-sm post-link-button" value="post">Nominate the post</button></span>');
         }
         else {
             lookup($(this), 'fic');
