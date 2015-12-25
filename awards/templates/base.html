@@ -10,6 +10,12 @@
   <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
 <![endif]-->
 <style>
+.navbar-brand {
+    float:none;
+    display:block;
+    height:auto;
+}
+
 h1 {
     padding-bottom:5px;
     border-bottom:1px solid #DDD;
@@ -30,10 +36,12 @@ input, select, textarea {
 form input[type=text], form input[type=password] {
     display:block;
     width:300px;
+    max-width:100%;
 }
 
 select {
     margin-bottom:2px;
+    max-width:100%;
 }
 
 .serebii-object .help-text {
@@ -84,6 +92,7 @@ textarea.results-bbcode {
 
 .panel-title small {
     margin-left:5px;
+    white-space:nowrap;
 }
 
 .award-description {
@@ -133,12 +142,7 @@ blockquote.detail {
 
 .nomination {
     position:relative;
-    padding:0 5px;
-}
-
-.nomination-votes {
-    float:left;
-    width:5em;
+    padding:5px 10px;
 }
 
 .nomination label {
@@ -154,6 +158,8 @@ blockquote.detail {
 
 .expand-info {
     float:right;
+    font-size:16px;
+    line-height:20px;
 }
 
 .nominator-info blockquote {
@@ -167,6 +173,19 @@ blockquote.detail {
 @media(min-width:767px) {
     .nomination-list {
         max-width:60%;
+    }
+
+    .nomination {
+        padding:0 5px;
+    }
+
+    .nomination-votes {
+        float:left;
+        width:5em;
+    }
+
+    .expand-info {
+        font-size:inherit;
     }
 
     .nominator-info.floating {
@@ -208,7 +227,7 @@ blockquote.detail {
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="{% url 'home' %}">{{year}} Serebii.net Forums Fanfiction Awards</a>
+                <a class="navbar-brand" href="{% url 'home' %}">Serebii.net Forums Fanfiction Awards</a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">

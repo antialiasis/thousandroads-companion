@@ -262,7 +262,7 @@ class Member(SerebiiObject, models.Model):
         return u"http://www.serebiiforums.com/member.php?%s" % self.user_id
 
     def link_html(self):
-        return u'<a href="%s">%s</a>' % (self.link(), self.username)
+        return u'<a href="%s" target="_blank">%s</a>' % (self.link(), self.username)
 
     def link_bbcode(self):
         return u'[url=%s]%s[/url]' % (self.link(), self.username)
@@ -376,7 +376,7 @@ class Fic(SerebiiObject, models.Model):
         return u"http://www.serebiiforums.com/showthread.php?%s" % urlbit
 
     def link_html(self):
-        return u'<a href="%s">%s</a> by %s' % (self.link(), self.title, pretty_join([author.link_html() for author in self.authors.all()]))
+        return u'<a href="%s" target="_blank">%s</a> by %s' % (self.link(), self.title, pretty_join([author.link_html() for author in self.authors.all()]))
 
     def link_bbcode(self):
         return u'[%(type)s=%(id)s]%(title)s[/%(type)s] by %(authors)s' % {'type': 'post' if self.post_id else 'thread', 'id': self.post_id or self.thread_id, 'title': self.title, 'authors': pretty_join([author.link_bbcode() for author in self.authors.all()])}
