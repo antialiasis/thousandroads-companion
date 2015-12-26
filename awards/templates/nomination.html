@@ -89,12 +89,7 @@ Please correct the errors below.
         {% endfor %}
     };
 
-    $(".serebii-object").each(function() {
-        var $select = $(this).children("select");
-        if ($select.children().length <= 1) {
-            $select.hide();
-        }
-    }).children("select").change(function() {
+    $(".serebii-object").children("select").change(function() {
         if ($(this).val() !== "") {
             // We've chosen a fic in the select menu - hide the input field
             $(this).siblings("input").val("").hide().next(".text-danger, .text-warning").remove();

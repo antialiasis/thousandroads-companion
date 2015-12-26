@@ -101,6 +101,73 @@ def get_post_author(post):
     return Member(user_id=user_id, username=username)
 
 
+def validate_post_fic(soup, post):
+    # Make sure this was posted in the awards year
+    forum_time, tz_offset = get_forum_time_info(soup)
+    posted = post.find('span', class_="postdate").get_text(strip=True)
+    posted_utc = get_datetime_from_postdate(posted, forum_time, tz_offset)
+
+    return check_in_awards_year(int(settings.YEAR), posted_utc)
+
+def validate_thread_fic(soup, thread_id, author):
+    # We need to check whether the 'fic was UPDATED in the  awards year
+    # First look at author's posts on the nominated page
+    # If any are from the awards year, we don't need to go further
+    userposts = get_user_post_times(soup, str(author))
+
+    if not validate_fic_page(int(settings.YEAR), userposts):
+        if not soup.find('span', class_="selected"):
+            # This is the only page!
+            # The story can't possibly be eligible.
+            return False
+
+        elif not soup.find('img', alt="Previous"):
+            # This is the first page!
+            if userposts[0] >= ELIGIBILITY_END:
+                # If the first post was made after the end of the awards year,
+                # the story can't possibly be eligible.
+                return False
+
+        elif not soup.find('img', alt='Next'):
+            # This is the last page!
+            # I don't believe this should be able to happen
+            # But just in case...
+            if userposts[-1] < ELIGIBILITY_START:
+                # If the last post was made before the beginning of the awards year,
+                # the story can't possibly be eligible.
+                return False
+
+        # Nothing for it but to start working backward through the thread
+        # First, fetch the last page if we aren't there already
+        lastimg = soup.find('img', alt='Last')
+
+        if lastimg:
+            nextlink = lastimg.parent['href']
+            pagenum = int(nextlink[nextlink.rfind('page') + 4:])
+        else:
+            # We start at this page - 1
+            pagenum = int(soup.find('span', class_="selected").get_text(strip=True))
+            nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
+
+        while pagenum > 0:
+            soup = get_soup('http://www.serebiiforums.com/{}'.format(nextlink))
+            userposts = get_user_post_times(soup, str(author))
+
+            if not validate_fic_page(int(settings.YEAR), userposts):
+                # If the author's first post on this page is from before the awards year,
+                # the story can't possibly be eligible.
+                if userposts[0] < ELIGIBILITY_START:
+                    return False
+
+                nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
+                pagenum -= 1
+
+            else:
+                break
+
+    return True
+
+
 class SerebiiPage(object):
     """
     A base class for a Serebii page. MemberPage and FicPage inherit
@@ -401,11 +468,20 @@ class Fic(SerebiiObject, models.Model):
             self.authors.add(*[author for author in self._authors if author not in existing_authors])
 
     def can_skip_download(self):
-        from awards.models import Nomination
-        return Nomination.objects.from_year().filter(fic=obj).exists()
+        from awards.models import Nomination, FicEligibility
+        if Nomination.objects.from_year().filter(fic=self).exists():
+            return True
+        eligible = FicEligibility.objects.get_eligible(self.thread_id, self.post_id)
+        if eligible:
+            return True  # We know the fic is valid; we can simply skip the validation
+        elif eligible is None:
+            return False  # We don't have eligibility information, so we need to do the download
+        else:
+            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)  # We know the fic is ineligible, so just raise the error straight away
 
     @classmethod
     def from_soup(cls, soup, thread_id, post_id):
+        from awards.models import FicEligibility
         if thread_id is None and post_id is None:
             raise ValidationError(u"You chose to nominate the thread, but you've entered a link to a post with no thread ID. Please enter a thread link.")
 
@@ -418,79 +494,34 @@ class Fic(SerebiiObject, models.Model):
         if thread_id is None:
             thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
 
+        cached_eligible = FicEligibility.objects.get_eligible(thread_id, post_id)
+        eligible = cached_eligible
+
         if post_id is not None:
             # The fic starts in a particular post - use the author of the post and a placeholder title
             post = soup.find(id="post_%s" % post_id)
             title = "%s - post %s" % (title_link.get_text(strip=True), post_id)
             author = get_post_author(post)
 
-            # Make sure this was posted in the awards year
-            forum_time, tz_offset = get_forum_time_info(soup)
-            posted = post.find('span', class_="postdate").get_text(strip=True)
-            posted_utc = get_datetime_from_postdate(posted, forum_time, tz_offset)
-
-            if not check_in_awards_year(int(settings.YEAR), posted_utc):
-                raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
-
+            if cached_eligible is None:
+                # We don't have eligibility info yet
+                eligible = validate_post_fic(soup, post)
         else:
             # The fic is a thread - use the thread title and the author of the first post
             title = title_link.get_text(strip=True)
             author = get_post_author(soup.find(id="posts").li)
 
-            # We need to check whether the 'fic was UPDATED in the  awards year
-            # First look at author's posts on the nominated page
-            # If any are from the awards year, we don't need to go further
-            userposts = get_user_post_times(soup, str(author))
+            if cached_eligible is None:
+                # We don't have eligibility info yet
+                eligible = validate_thread_fic(soup, thread_id, author)
 
-            if not validate_fic_page(int(settings.YEAR), userposts):
-                if not soup.find('span', class_="selected"):
-                    # This is the only page!
-                    # The story can't possibly be eligible.
-                    raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+        if cached_eligible is None and timezone.now().year > settings.YEAR:
+            # We didn't have cached eligibility info, so save the info we just fetched in the eligibility cache
+            # We never want to cache unless we're past the awards year
+            FicEligibility.objects.set_eligible(eligible, thread_id, post_id)
 
-                elif not soup.find('img', alt="Previous"):
-                    # This is the first page!
-                    if userposts[0] >= ELIGIBILITY_END:
-                        # If the first post was made after the end of the awards year,
-                        # the story can't possibly be eligible.
-                        raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
-
-                elif not soup.find('img', alt='Next'):
-                    # This is the last page!
-                    # I don't believe this should be able to happen
-                    # But just in case...
-                    if userposts[-1] < ELIGIBILITY_START:
-                        # If the last post was made before the beginning of the awards year,
-                        # the story can't possibly be eligible.
-                        raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
-
-                # Nothing for it but to start working backward through the thread
-                # First, fetch the last page if we aren't there already
-                lastimg = soup.find('img', alt='Last')
-
-                if lastimg:
-                    nextlink = lastimg.parent['href']
-                    pagenum = int(nextlink[nextlink.rfind('page') + 4:])
-                else:
-                    # We start at this page - 1
-                    pagenum = int(soup.find('span', class_="selected").get_text(strip=True))
-                    nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
-
-                while pagenum > 0:
-                    soup = get_soup('http://www.serebiiforums.com/{}'.format(nextlink))
-                    userposts = get_user_post_times(soup, str(author))
-
-                    if not validate_fic_page(int(settings.YEAR), userposts):
-                        # If the author's first post on this page is from before the awards year,
-                        # the story can't possibly be eligible.
-                        if userposts[0] < ELIGIBILITY_START:
-                            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
-
-                        nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
-                        pagenum -= 1
-
-                    else:
-                        break
+        if not eligible:
+            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
 
         obj = cls(title=title, thread_id=thread_id, post_id=post_id)
         obj._authors = [author]

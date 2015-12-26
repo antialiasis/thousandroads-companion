@@ -360,3 +360,29 @@ class Vote(YearlyData):
             raise ValidationError(u"This nomination is not for this award.")
         if self.nomination.nominee == self.member or self.nomination.fic and self.member in self.nomination.fic.authors.all():
             raise ValidationError(u"You cannot vote for yourself.")
+
+
+class EligibilityManager(models.Manager):
+    def get_eligible(self, thread_id, post_id=None, year=CURRENT_YEAR):
+        entry = self.filter(thread_id=thread_id, post_id=post_id, year=year).first()
+        if entry is None:
+            return None
+        else:
+            return entry.is_eligible
+
+    def set_eligible(self, eligible, thread_id, post_id=None, year=CURRENT_YEAR):
+        return self.update_or_create(thread_id=thread_id, post_id=post_id, year=year, defaults={'is_eligible': eligible})
+
+
+class FicEligibility(YearlyData):
+    thread_id = models.PositiveIntegerField()
+    post_id = models.PositiveIntegerField(blank=True, null=True)
+    is_eligible = models.BooleanField()
+
+    objects = EligibilityManager()
+
+    class Meta:
+        unique_together = ('thread_id', 'post_id', 'year')
+
+    def __unicode__(self):
+        return u"Eligibility result for thread %s in %s: %s" % (self.thread_id if self.post_id is None else u"%s post %s" % (self.thread_id, self.post_id), self.year, self.is_eligible)
