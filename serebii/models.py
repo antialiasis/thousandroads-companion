@@ -95,9 +95,15 @@ def get_soup(url):
 
 
 def get_post_author(post):
-    user_link = post.find('div', class_="username_container").find('a', class_="username")
-    username = user_link.strong.get_text(strip=True)
-    user_id = MemberPage.get_params_from_url(user_link['href'])['user_id']
+    user_elem = post.find('div', class_="username_container").find(class_="username")
+    if user_elem.name == 'a':
+        # It's a registered user's linked username
+        username = user_elem.strong.get_text(strip=True)
+        user_id = MemberPage.get_params_from_url(user_elem['href'])['user_id']
+    else:
+        # It's (presumably) a guest
+        username = user_elem.get_text(strip=True)
+        user_id = None
     return Member(user_id=user_id, username=username)
 
 
@@ -309,6 +315,13 @@ class MemberManager(models.Manager):
     def nominated_in_year(self, year):
         return self.get_queryset().filter(Q(nominations__year=year) | Q(fics__nominations__year=year)).distinct()
 
+    def guests(self):
+        return self.filter(user_id__gte=1000000)
+
+    def get_next_guest_id(self):
+        latest_guest = self.guests().order_by('-user_id').first()
+        return latest_guest.user_id + 1 if latest_guest else 1000000
+
 
 class Member(SerebiiObject, models.Model):
     user_id = models.PositiveIntegerField(unique=True, primary_key=True)
@@ -329,16 +342,26 @@ class Member(SerebiiObject, models.Model):
         return u"http://www.serebiiforums.com/member.php?%s" % self.user_id
 
     def link_html(self):
-        return u'<a href="%s" target="_blank">%s</a>' % (self.link(), self.username)
+        return u'<a href="%s" target="_blank">%s</a>' % (self.link(), self.username) if not self.is_guest() else self.username
 
     def link_bbcode(self):
-        return u'[url=%s]%s[/url]' % (self.link(), self.username)
+        return u'[url=%s]%s[/url]' % (self.link(), self.username) if not self.is_guest() else self.username
+
+    def is_guest(self):
+        return self.user_id >= 1000000
 
     @classmethod
     def get_page_class(self):
         return MemberPage
 
     def save(self, *args, **kwargs):
+        if self.user_id is None:
+            # Check if we already have a guest user with this username
+            existing_guest = Member.objects.guests().filter(username=self.username).first()
+            if existing_guest:
+                self.user_id = existing_guest.user_id
+            else:
+                self.user_id = Member.objects.get_next_guest_id()
         self.user_id = int(self.user_id)
         return super(Member, self).save(*args, **kwargs)
 
