@@ -14,7 +14,7 @@
 {% if form %}<li class="nomination"><label>{% voting_form_field award.award %} (No vote)</label></li>{% endif %}
 {% for nomination in award.distinct_nominations %}
 <li class="nomination">{% if nomination.place %}<div class="nomination-votes">{{nomination.get_votes}} vote{{nomination.get_votes|pluralize}}: </div>{% endif %}<div class="nomination-line">{% if form %}<label>{% voting_form_field award.award nomination %}{% endif %}
-<span>{{nomination.nomination_html|safe}}</span>{% if form %}</label>{% endif %}</div>
+<span>{{nomination.nomination_html|safe}}</span> {% if not form and last_pageview and nomination.modified_date > last_pageview %}<span class="label">NEW</span>{% endif %}{% if form %}</label>{% endif %}</div>
 <div class="nominator-info">
 {% with nominator_details=nomination.get_nominator_details %}
 <p>Nominated by {% for nominator in nominator_details %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}{{nominator.member.link_html|safe}}{% if user.is_staff %} [<a href="{% url 'admin_nomination' member=nominator.member.pk year=award.year %}">edit</a>]{% endif %}{% endfor %}</p>

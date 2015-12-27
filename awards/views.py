@@ -14,7 +14,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
-from awards.models import YearAward, Phase
+from awards.models import YearAward, Phase, PageView
 from serebii.models import Member, Fic
 from serebii.forms import TempUserProfileForm
 
@@ -43,6 +43,24 @@ class LoginRequiredMixin(object):
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
         return super(LoginRequiredMixin, self).dispatch(*args, **kwargs)
+
+
+class PageViewMixin(object):
+    """
+    A mixin causing page view times to be tracked for this view.
+
+    """
+    def get(self, *args, **kwargs):
+        # We need to first calculate the response (which calls
+        # get_context_data) before we add the new pageview.
+        response = super(PageViewMixin, self).get(*args, **kwargs)
+        PageView.objects.add_pageview(self.request.user, self.page_name)
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super(PageViewMixin, self).get_context_data(**kwargs)
+        context['last_pageview'] = PageView.objects.get_last_pageview(self.request.user, self.page_name)
+        return context
 
 
 class YearAwardsMassEditView(FormSetView):
@@ -143,7 +161,8 @@ class NominationView(TempUserMixin, FormSetView):
         return context
 
 
-class AllNominationsView(ListView):
+class AllNominationsView(PageViewMixin, ListView):
+    page_name = 'all_nominations'
     context_object_name = 'year_awards'
     template_name = "all_nominations.html"
 

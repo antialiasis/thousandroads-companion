@@ -6,7 +6,8 @@ from django.db.models import Q, Count, Prefetch
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
-from serebii.models import Member, Fic
+from django.utils import timezone
+from serebii.models import Member, Fic, User
 
 
 CURRENT_YEAR = settings.YEAR
@@ -245,6 +246,7 @@ class Nomination(YearlyData):
     detail = models.TextField(blank=True, help_text=u"The character(s), scene or quote that you want to nominate.")
     link = models.URLField(blank=True, null=True, help_text=u"A link to a sample (generally a post) illustrating your nomination.")
     comment = models.TextField(blank=True, help_text=u"Optionally, you may write a comment explaining why you feel this nomination deserves the award. Users will be able to see this on the voting form. Basic BBCode allowed.")
+    modified_date = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return u"%s nominated for %s in %s" % (self.nomination_text(), self.award, self.year)
@@ -386,3 +388,26 @@ class FicEligibility(YearlyData):
 
     def __unicode__(self):
         return u"Eligibility result for thread %s in %s: %s" % (self.thread_id if self.post_id is None else u"%s post %s" % (self.thread_id, self.post_id), self.year, self.is_eligible)
+
+
+class PageViewManager(models.Manager):
+    def add_pageview(self, user, page):
+        return self.update_or_create(user=user, page=page, defaults={})
+
+    def get_last_pageview(self, user, page):
+        pageview = self.filter(user=user, page=page).first()
+        return pageview.viewed_time if pageview else timezone.now()
+
+
+class PageView(models.Model):
+    user = models.ForeignKey(User)
+    page = models.CharField(max_length=20)
+    viewed_time = models.DateTimeField(auto_now=True)
+
+    objects = PageViewManager()
+
+    class Meta:
+        unique_together = ('user', 'page')
+
+    def __unicode__(self):
+        return u"%s viewed %s at %s" % (self.user, self.page, self.viewed_time)
