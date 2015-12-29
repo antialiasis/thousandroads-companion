@@ -25,7 +25,9 @@
 
 <p>These are {% if formset.member == user.member %}your{% else %}<strong>{{formset.member}}</strong>'s{% endif %} nominations for the {{formset.year}} awards.{% if formset.member == user.member %} For as long as the nomination phase lasts, you can come back here and alter your nominations, even after you click the "Submit nominations" button.{% endif %}</p>
 
-<p><strong>All nominated stories must have been updated in {{year}}, and individual scenes, quotes or chapters nominated must have been posted in {{year}}, according to the UTC timezone.</strong> If you make an ineligible nomination, you will be asked to change it. You may make up to two nominations in each category, so long as</p>
+<p><strong>All nominated stories must have been updated in {{year}}, and individual scenes, quotes or chapters nominated must have been posted in {{year}}, according to the UTC timezone.</strong> This will be automatically enforced to a degree; however, doing so is not always realistic. The mods will go through nominations as they are made and ask you to change any that are ineligible.</p>
+
+<p>You may make up to two nominations in each category, so long as</p>
 
 <ul>
 <li>you nominate at least <strong>{{min_different_nominations|apnumber}}</strong> different authors in all</li>
