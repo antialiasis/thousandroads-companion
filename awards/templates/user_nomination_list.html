@@ -1,0 +1,33 @@
+{% load serebii_utils %}
+{% for nomination in nominations %}
+{% ifchanged nomination.award.category %}
+<h2>{{nomination.award.category}}</h2>
+{% endifchanged %}
+{% ifchanged nomination.award.pk %}
+{% if not forloop.first %}
+</ul>
+</fieldset>
+{% endif %}
+<fieldset id="field-award_{{nomination.award.pk}}">
+<legend>{{nomination.award}}</legend>
+
+<ul class="list-unstyled nomination-list">
+{% endifchanged %}
+<li class="nomination"><div class="nomination-line">{{nomination.nomination_html|safe}}
+{% if nomination.award.has_samples %}
+<a href="{{nomination.link}}">(Sample)</a>
+{% endif %}
+</div>
+
+{% if nomination.comment %}
+<blockquote>
+{{nomination.comment|parse_bbcode}}
+<footer>{{member.link_html|safe}}</footer>
+</blockquote>
+{% endif %}
+</li>
+{% endfor %}
+{% if nominations %}
+</ul>
+</fieldset>
+{% endif %}

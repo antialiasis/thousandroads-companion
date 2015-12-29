@@ -1,5 +1,7 @@
 import bbcode
 from django import template
+from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.utils.safestring import mark_safe
 
 register = template.Library()
@@ -7,6 +9,13 @@ register = template.Library()
 @register.filter
 def parse_bbcode(text):
     return mark_safe(bbcode.render_html(text))
+
+@register.simple_tag
+def optional_year_url(route_name, *args, **kwargs):
+    if 'year' in kwargs and kwargs['year'] in (None, settings.YEAR):
+        # We don't need the year in the URL
+        kwargs.pop('year')
+    return reverse(route_name, kwargs=kwargs)
 
 @register.simple_tag(takes_context=True)
 def voting_form_field_errors(context, award):

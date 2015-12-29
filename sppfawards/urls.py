@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse_lazy
 from django.views.generic.base import TemplateView
 from django.contrib.auth.views import login, logout
 from serebii.views import VerificationView, RegisterView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView
-from awards.views import NominationView, AllNominationsView, AdminNominationView, VotingView, VotingStatsView
+from awards.views import NominationView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView
 from serebii.models import Member, Fic
 
 from django.contrib import admin
@@ -25,8 +25,9 @@ urlpatterns = patterns('',
     url(r'^lookup/member/$', SerebiiObjectLookupView.as_view(model=Member), name='lookup_member'),
 
     url(r'^nomination/$', NominationView.as_view(), name='nomination'),
-    url(r'^nomination/all/$', AllNominationsView.as_view(), name='all_nominations'),
-    url(r'^nomination/(?P<member>\d+)/(?:(?P<year>\d{4})/)?$', AdminNominationView.as_view(), name='admin_nomination'),
+    url(r'^nomination/all/(?:(?P<year>\d{4})/)?$', AllNominationsView.as_view(), name='all_nominations'),
+    url(r'^nomination/(?P<member>\d+)/(?:(?P<year>\d{4})/)?$', UserNominationsView.as_view(), name='user_nominations'),
+    url(r'^nomination/(?P<member>\d+)/(?:(?P<year>\d{4})/)?edit/$', AdminNominationView.as_view(), name='admin_nomination'),
 
     url(r'^voting/$', VotingView.as_view(), name='voting'),
     url(r'^voting/stats/$', VotingStatsView.as_view(), name='voting_stats'),

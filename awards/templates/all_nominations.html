@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load serebii_utils %}
 {% block title %}Current Nominations{% endblock %}
 
 {% block active_all_nominations %} class="active"{% endblock %}
@@ -8,10 +9,10 @@
 
 <p>{% if phase == 'nomination' %}These are the nominations that have been made so far. Note that the moderators may have yet to merge nominations for the same thing or make other corrections.{% if user.is_authenticated and user.verified %} You may add your own nominations <a href="{% url 'nomination' %}">here</a>.{% endif %}{% else %}These are all the nominations for the {{year}} awards.{% if user.is_authenticated and user.verified and phase == 'voting' %} Vote for your favorites <a href="{% url 'voting' %}">here</a>.{% endif %}{% endif %}</p>
 
-<p>The following members have submitted nominations: {% for member in nominators %}{% if not forloop.first %}, {% endif %}<strong>{{member}}</strong>{% empty %}None{% endfor %}{% if nominators|length %} ({{nominators|length}} member{{nominators|length|pluralize}}){% endif %}</p>
+<p>The following members have submitted nominations: {% for member in nominators %}{% if not forloop.first %}, {% endif %}<strong><a href="{% optional_year_url 'user_nominations' member=member.pk year=view.kwargs.year %}">{{member}}</a></strong>{% empty %}None{% endfor %}{% if nominators|length %} ({{nominators|length}} member{{nominators|length|pluralize}}){% endif %}</p>
 
 {% if user.is_staff and unverified_nominators %}
-<p>{% for member in unverified_nominators %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<strong>{{member}}</strong>{% endfor %} {{unverified_nominators|length|pluralize:"has, have"}} submitted unverified nominations.</p>
+<p>{% for member in unverified_nominators %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<strong><a href="{% optional_year_url 'user_nominations' member=member.pk year=view.kwargs.year %}">{{member}}</a></strong>{% endfor %} {{unverified_nominators|length|pluralize:"has, have"}} submitted unverified nominations.</p>
 {% endif %}
 
 {% include "nomination_list.html" %}

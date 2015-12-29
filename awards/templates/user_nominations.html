@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load serebii_utils %}
+{% block title %}{{member}}'s nominations{% endblock %}
+
+{% block active_all_nominations %} class="active"{% endblock %}
+
+{% block content %}
+<h1>{{member}}'s Nominations</h1>
+
+<p>These are {{member}}'s nominations and comments for the {{view.kwargs.year|default_if_none:year}} awards. See all nominations <a href="{% optional_year_url 'all_nominations' year=view.kwargs.year %}">here</a>.</p>
+
+{% include "user_nomination_list.html" %}
+{% endblock %}

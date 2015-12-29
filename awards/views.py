@@ -14,7 +14,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
-from awards.models import YearAward, Phase, PageView
+from awards.models import YearAward, Nomination, Phase, PageView
 from serebii.models import Member, Fic
 from serebii.forms import TempUserProfileForm
 
@@ -167,13 +167,29 @@ class AllNominationsView(PageViewMixin, ListView):
     template_name = "all_nominations.html"
 
     def get_queryset(self):
-        return YearAward.objects.get_with_distinct_nominations()
+        return YearAward.objects.get_with_distinct_nominations(year=self.kwargs.get('year') or settings.YEAR)
 
     def get_context_data(self, **kwargs):
         context = super(AllNominationsView, self).get_context_data(**kwargs)
+
+        year = self.kwargs.get('year') or settings.YEAR
         verified_filter = Q(user__isnull=True) | Q(user__verified=True)
-        context['nominators'] = Member.objects.filter(verified_filter, nominations_by__year=settings.YEAR).values_list('username', flat=True).distinct()
-        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
+
+        context['nominators'] = Member.objects.filter(verified_filter, nominations_by__year=year).distinct()
+        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=year).exclude(verified_filter).distinct()
+        return context
+
+
+class UserNominationsView(ListView):
+    context_object_name = 'nominations'
+    template_name = "user_nominations.html"
+
+    def get_queryset(self):
+        return Nomination.objects.filter(member=self.kwargs['member'], year=self.kwargs.get('year') or settings.YEAR).prefetch_related('award__category').order_by('award__category', 'award__display_order', 'award')
+
+    def get_context_data(self, **kwargs):
+        context = super(UserNominationsView, self).get_context_data(**kwargs)
+        context['member'] = Member.objects.get(user_id=self.kwargs['member'])
         return context
 
 
