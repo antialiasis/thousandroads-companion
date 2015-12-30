@@ -114,6 +114,10 @@ class Award(models.Model):
     to sample posts for e.g. reviewer awards). This allows for some
     flexibility for future awards.
 
+    The requires_new field, and potentially new fields to be added in
+    the future, defines whether nominations must be "new", that is, new
+    this awards year.
+
     """
     category = models.ForeignKey(Category)
     name = models.CharField(max_length=100)
@@ -122,6 +126,7 @@ class Award(models.Model):
     has_fic = models.BooleanField(default=False)
     has_detail = models.BooleanField(default=False)
     has_samples = models.BooleanField(default=False)
+    requires_new = models.BooleanField(default=False)
     display_order = models.PositiveIntegerField(blank=True)
 
     class Meta:
@@ -262,6 +267,8 @@ class Nomination(YearlyData):
             raise ValidationError(u"You must provide a sample link for this award.")
         if self.nominee == self.member or self.fic and self.member in self.fic.authors.all():
             raise ValidationError(u"You cannot nominate yourself or your own work.")
+        if self.award.requires_new and self.award.has_fic and self.fic.posted_date and self.fic.posted_date.year != settings.YEAR:
+            raise ValidationError(u"Only stories posted after January 1st, %s UTC are eligible for this award." % settings.YEAR)
 
     def is_distinct_from(self, nomination):
         """

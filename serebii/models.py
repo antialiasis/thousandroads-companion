@@ -107,13 +107,15 @@ def get_post_author(post):
     return Member(user_id=user_id, username=username)
 
 
-def validate_post_fic(soup, post):
-    # Make sure this was posted in the awards year
+def get_post_date(soup, post):
     forum_time, tz_offset = get_forum_time_info(soup)
     posted = post.find('span', class_="postdate").get_text(strip=True)
-    posted_utc = get_datetime_from_postdate(posted, forum_time, tz_offset)
+    return get_datetime_from_postdate(posted, forum_time, tz_offset)
 
-    return check_in_awards_year(int(settings.YEAR), posted_utc)
+
+def validate_post_fic(soup, post):
+    # Make sure this was posted in the awards year
+    return check_in_awards_year(int(settings.YEAR), get_post_date(soup, post))
 
 def validate_thread_fic(soup, thread_id, author):
     # We need to check whether the 'fic was UPDATED in the  awards year
@@ -439,6 +441,7 @@ class Fic(SerebiiObject, models.Model):
     authors = models.ManyToManyField(Member, related_name='fics')
     thread_id = models.PositiveIntegerField()
     post_id = models.PositiveIntegerField(blank=True, null=True)
+    posted_date = models.DateTimeField()
 
     objects = FicManager()
 
@@ -525,6 +528,7 @@ class Fic(SerebiiObject, models.Model):
             post = soup.find(id="post_%s" % post_id)
             title = "%s - post %s" % (title_link.get_text(strip=True), post_id)
             author = get_post_author(post)
+            posted_date = get_post_date(soup, post)
 
             if cached_eligible is None:
                 # We don't have eligibility info yet
@@ -532,7 +536,9 @@ class Fic(SerebiiObject, models.Model):
         else:
             # The fic is a thread - use the thread title and the author of the first post
             title = title_link.get_text(strip=True)
-            author = get_post_author(soup.find(id="posts").li)
+            first_post = soup.find(id="posts").li
+            author = get_post_author(first_post)
+            posted_date = get_post_date(soup, first_post)
 
             if cached_eligible is None:
                 # We don't have eligibility info yet
@@ -546,7 +552,7 @@ class Fic(SerebiiObject, models.Model):
         if not eligible:
             raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
 
-        obj = cls(title=title, thread_id=thread_id, post_id=post_id)
+        obj = cls(title=title, thread_id=thread_id, post_id=post_id, posted_date=posted_date)
         obj._authors = [author]
         return obj
 
