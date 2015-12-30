@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.conf.urls import patterns, url
-from awards.models import Category, Award, YearAward, Nomination
+from awards.models import Category, Award, YearAward, Nomination, FicEligibility
 from awards.views import YearAwardsMassEditView
 
 
@@ -32,4 +32,5 @@ class AwardAdmin(admin.ModelAdmin):
 admin.site.register(Category)
 admin.site.register(Award, AwardAdmin)
 admin.site.register(YearAward, YearAwardsAdmin)
+admin.site.register(FicEligibility)
 admin.site.register(Nomination)

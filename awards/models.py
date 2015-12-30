@@ -384,6 +384,12 @@ class EligibilityManager(models.Manager):
 
 
 class FicEligibility(YearlyData):
+    """
+    An eligibility result for a given fic in a given year. The fic does
+    not have to actually exist in the database; this allows for
+    cached eligibility checks for fics that never get created.
+
+    """
     thread_id = models.PositiveIntegerField()
     post_id = models.PositiveIntegerField(blank=True, null=True)
     is_eligible = models.BooleanField()
@@ -392,6 +398,7 @@ class FicEligibility(YearlyData):
 
     class Meta:
         unique_together = ('thread_id', 'post_id', 'year')
+        verbose_name_plural = 'fic eligibilities'
 
     def __unicode__(self):
         return u"Eligibility result for thread %s in %s: %s" % (self.thread_id if self.post_id is None else u"%s post %s" % (self.thread_id, self.post_id), self.year, self.is_eligible)
