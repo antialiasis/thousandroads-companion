@@ -72,7 +72,7 @@ YEAR = int(os.environ.get('YEAR', MAX_YEAR))
 
 def parse_environ_date(key):
     environ_date = os.environ.get(key, None)
-    return datetime.striptime(environ_date, '%Y-%m-%d') if environ_date is not None else None
+    return datetime.strptime(environ_date, '%Y-%m-%d') if environ_date is not None else None
 
 NOMINATION_START = parse_environ_date('NOMINATION_START')
 VOTING_START = parse_environ_date('VOTING_START')
