@@ -18,7 +18,7 @@ ELIGIBILITY_END = datetime(int(settings.YEAR) + 1, 1, 1, 0, 0, tzinfo=timezone.u
 ELIGIBILITY_ERROR_MESSAGE = u"This fanfic is not eligible for this year's awards. Please nominate a story posted/updated between 00:00 UTC January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR)
 
 
-def check_in_awards_year(year, date):
+def check_in_awards_year(date):
     if date < ELIGIBILITY_END and date >= ELIGIBILITY_START:
         return True
     else:
@@ -61,8 +61,8 @@ def get_user_post_times(soup, author):
     return userposts
 
 
-def validate_fic_page(year, posts):
-    return any(check_in_awards_year(year, date) for date in posts)
+def validate_fic_page(posts):
+    return any(check_in_awards_year(date) for date in posts)
 
 
 def get_forum_time_info(page):
@@ -115,7 +115,7 @@ def get_post_date(soup, post):
 
 def validate_post_fic(soup, post):
     # Make sure this was posted in the awards year
-    return check_in_awards_year(int(settings.YEAR), get_post_date(soup, post))
+    return check_in_awards_year(get_post_date(soup, post))
 
 def validate_thread_fic(soup, thread_id, author):
     # We need to check whether the 'fic was UPDATED in the  awards year
@@ -123,7 +123,7 @@ def validate_thread_fic(soup, thread_id, author):
     # If any are from the awards year, we don't need to go further
     userposts = get_user_post_times(soup, str(author))
 
-    if not validate_fic_page(int(settings.YEAR), userposts):
+    if not validate_fic_page(userposts):
         if not soup.find('span', class_="selected"):
             # This is the only page!
             # The story can't possibly be eligible.
@@ -161,7 +161,7 @@ def validate_thread_fic(soup, thread_id, author):
             soup = get_soup('http://www.serebiiforums.com/{}'.format(nextlink))
             userposts = get_user_post_times(soup, str(author))
 
-            if not validate_fic_page(int(settings.YEAR), userposts):
+            if not validate_fic_page(userposts):
                 # If the author's first post on this page is from before the awards year,
                 # the story can't possibly be eligible.
                 if userposts[0] < ELIGIBILITY_START:
@@ -279,15 +279,15 @@ class SerebiiObject(object):
             # parameters
             obj = cls.objects.get(**kwargs)
             if obj.can_skip_download():
-                # Only return the existing object if it's been nominated this
-                # year; otherwise we want to fetch it from the forums to
-                # validate it
+                # Only return the existing object if we don't need to check it
+                # for eligibility; otherwise we want to refetch it from the
+                # forums to validate it
                 return obj
         except (cls.DoesNotExist, cls.MultipleObjectsReturned):
             pass
-        # Either this doesn't exist in the database or we can't uniquely
-        # determine the object from the URL parameters, so fetch it from the
-        # forums instead.
+        # Either this doesn't exist in the database, we can't uniquely
+        # determine the object from the URL parameters, or we simply need to
+        # refetch it for validation purposes, so fetch it from the forums
         obj = cls.from_soup(get_soup(cls(**kwargs).link()), **kwargs)
         if save:
             obj.save()
@@ -310,6 +310,8 @@ class SerebiiObject(object):
         return page_class(self)
 
     def can_skip_download(self):
+        # By default, we can always skip downloads - we only need to implement
+        # special checks here if we have validation
         return True
 
 
@@ -499,16 +501,34 @@ class Fic(SerebiiObject, models.Model):
             self.authors.add(*[author for author in self._authors if author not in existing_authors])
 
     def can_skip_download(self):
+        """
+        Check whether we can skip refetching this existing fic for an
+        eligibility check.
+
+        """
         from awards.models import Nomination, FicEligibility
+
+        # If the posted_date is within the awards year, then we already know
+        # the fic is eligible and can skip the whole shebang
+        if check_in_awards_year(self.posted_date):
+            return True
+
+        # Otherwise, is the fic already nominated? Then we must have already
+        # checked it for eligibility
         if Nomination.objects.from_year().filter(fic=self).exists():
             return True
+
+        # Otherwise, check the eligibility cache
         eligible = FicEligibility.objects.get_eligible(self.thread_id, self.post_id)
         if eligible:
-            return True  # We know the fic is valid; we can simply skip the validation
+            # We know the fic is valid, so yes, we can skip the validation
+            return True
         elif eligible is None:
-            return False  # We don't have eligibility information, so we need to do the download
+            # We don't have eligibility information, so we can't skip the validation
+            return False
         else:
-            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)  # We know the fic is ineligible, so just raise the error straight away
+            # We know the fic is ineligible, so just raise the error straight away
+            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
 
     @classmethod
     def from_soup(cls, soup, thread_id, post_id):
@@ -551,7 +571,7 @@ class Fic(SerebiiObject, models.Model):
 
         if cached_eligible is None and timezone.now().year > settings.YEAR:
             # We didn't have cached eligibility info, so save the info we just fetched in the eligibility cache
-            # We never want to cache unless we're past the awards year
+            # We never want to cache eligibility unless we're past the awards year
             FicEligibility.objects.set_eligible(eligible, thread_id, post_id)
 
         if not eligible:
