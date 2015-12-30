@@ -313,9 +313,9 @@ class SerebiiObject(object):
         return True
 
 
-class MemberManager(models.Manager):
+class MemberQuerySet(models.QuerySet):
     def nominated_in_year(self, year):
-        return self.get_queryset().filter(Q(nominations__year=year) | Q(fics__nominations__year=year)).distinct()
+        return self.filter(Q(nominations__year=year) | Q(fics__nominations__year=year)).distinct()
 
     def guests(self):
         return self.filter(user_id__gte=1000000)
@@ -329,7 +329,7 @@ class Member(SerebiiObject, models.Model):
     user_id = models.PositiveIntegerField(unique=True, primary_key=True)
     username = models.CharField(max_length=50)
 
-    objects = MemberManager()
+    objects = MemberQuerySet.as_manager()
 
     class Meta:
         ordering = ['username']
@@ -419,12 +419,17 @@ class UnverifiedUserMiddleware(object):
             logout(request)
 
 
+class FicQuerySet(models.QuerySet):
+    def nominated_in_year(self, year):
+        return self.filter(nominations__year=year).distinct()
+
+
 class FicManager(models.Manager):
     def get_queryset(self):
-        return super(FicManager, self).get_queryset().prefetch_related('authors')
+        return FicQuerySet(self.model, using=self._db).prefetch_related('authors')
 
     def nominated_in_year(self, year):
-        return self.get_queryset().filter(nominations__year=year).distinct()
+        return self.get_queryset().nominated_in_year(year)
 
 
 class Fic(SerebiiObject, models.Model):

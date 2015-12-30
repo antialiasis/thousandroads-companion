@@ -4,6 +4,7 @@ from django.db import IntegrityError
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.forms.formsets import BaseFormSet
+from django.forms.models import ModelChoiceIterator
 from django.utils.html import mark_safe
 from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR
 from serebii.models import Member, MemberPage, Fic, FicPage
@@ -134,6 +135,24 @@ class SerebiiObjectSelect(forms.Select):
         return super(SerebiiObjectSelect, self).render(name, value, attrs, choices=choices)
 
 
+class SerebiiObjectIterator(ModelChoiceIterator):
+    """
+    A version of ModelChoiceIterator that limits the displayed choices
+    to those objects that have been nominated in the current year.
+
+    """
+    def __init__(self, field):
+        super(SerebiiObjectIterator, self).__init__(field)
+        self.queryset = self.queryset.nominated_in_year(CURRENT_YEAR)
+
+
+class SerebiiObjectChoiceField(forms.ModelChoiceField):
+    def _get_choices(self):
+        return SerebiiObjectIterator(self)
+
+    choices = property(_get_choices, forms.ChoiceField._set_choices)
+
+
 class SerebiiObjectField(forms.MultiValueField):
     """
     A field for entering a fic or member on Serebii.
@@ -146,10 +165,8 @@ class SerebiiObjectField(forms.MultiValueField):
         # MultiValueField's clean() won't stop us in our tracks later.
         self.really_required = kwargs.pop('required', True)
         self.object_class = page_class.object_class
-        # The actual field's queryset argument needs to be the entire collection of fics/members...
-        object_dropdown = forms.ModelChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class))
-        # ...but we must limit the choices instead to make sure the dropdown only has the objects nominated this year
-        object_dropdown.widget.choices = [('', object_dropdown.empty_label)] + [(obj.pk, unicode(obj)) for obj in self.object_class.objects.nominated_in_year(CURRENT_YEAR)]
+        # The actual field's queryset argument needs to be the entire collection of fics/members
+        object_dropdown = SerebiiObjectChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class))
         fields = [
             object_dropdown,
             SerebiiLinkField(page_class)
