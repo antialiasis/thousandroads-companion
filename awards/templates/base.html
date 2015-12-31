@@ -251,7 +251,7 @@ blockquote.detail {
                         {% endif %}
                     {% endif %}
                     {% if user.is_authenticated %}
-                        {% if not user.member and not user.verified %}
+                        {% if not user.verified %}
                     <li{% block active_verification %}{% endblock %}><a href="{% url 'verification' %}">Verify user</a></li>
                         {% endif %}
                     <li><a href="{% url 'logout' %}">Log out</a></li>

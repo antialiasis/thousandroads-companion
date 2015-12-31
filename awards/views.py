@@ -121,7 +121,7 @@ class TempUserMixin(object):
             if form.is_valid():
                 user = form.create_temp_user()
                 login(self.request, user)
-                messages.success(self.request, mark_safe(u'You have now been logged in as a temporary user. %s' % self.temp_user_success_message))
+                messages.success(self.request, mark_safe(u'You have now been logged in as a temporary user. %s' % self.temp_user_success_message % reverse('verification')))
                 return HttpResponseRedirect(self.get_success_url())
             else:
                 return self.render_to_response(self.get_context_data(form=form))
@@ -140,7 +140,7 @@ class NominationView(TempUserMixin, FormSetView):
     extra = 0
     success_url = reverse_lazy('nomination')
     template_name = "nomination.html"
-    temp_user_success_message = 'After making your nominations, you <strong>must</strong> post in <a href="%s">the nomination thread on the forums</a> to confirm your identity.' % settings.NOMINATION_THREAD
+    temp_user_success_message = 'After making your nominations, you <strong>must</strong> <a href="%s">verify your account</a> to confirm your identity.'
 
     def get_formset_kwargs(self):
         kwargs = super(NominationView, self).get_formset_kwargs()
@@ -150,7 +150,7 @@ class NominationView(TempUserMixin, FormSetView):
 
     def formset_valid(self, formset):
         formset.save()
-        msg = "You may return here at any point until the end of the nomination phase to change your nominations." if self.request.user.verified else 'Remember, in order for your nominations to be counted you must <strong>post in <a href="%s">the nomination thread</a></strong> to confirm that this is you!' % settings.NOMINATION_THREAD
+        msg = "You may return here at any point until the end of the nomination phase to change your nominations." if self.request.user.verified else 'Remember, in order for your nominations to be counted you <strong>must</strong> <a href="%s">verify your identity</a> to confirm that this is you!' % reverse('verification')
         messages.success(self.request, mark_safe(u"Your nominations have been saved. %s" % msg))
         return super(NominationView, self).formset_valid(formset)
 
@@ -217,7 +217,7 @@ class VotingView(TempUserMixin, FormView):
     form_class = VotingForm
     template_name = "voting.html"
     success_url = reverse_lazy('voting')
-    temp_user_success_message = 'After placing your votes, you <strong>must</strong> post in <a href="%s">the voting thread on the forums</a> to confirm your identity.' % settings.VOTING_THREAD
+    temp_user_success_message = 'After placing your votes, you <strong>must</strong> <a href="%s">verify your account</a> to confirm your identity.'
 
     def get_form_kwargs(self):
         kwargs = super(VotingView, self).get_form_kwargs()
@@ -232,7 +232,7 @@ class VotingView(TempUserMixin, FormView):
 
     def form_valid(self, form):
         form.save()
-        msg = "You may return here at any point until the end of the voting phase to change your votes." if self.request.user.verified else 'Remember, in order for your votes to be counted you must <strong>post in <a href="%s">the voting thread</a></strong> to confirm that this is you!' % settings.VOTING_THREAD
+        msg = "You may return here at any point until the end of the voting phase to change your votes." if self.request.user.verified else 'Remember, in order for your votes to be counted you <strong>must</strong> <a href="%s">verify your identity</a> to confirm that this is you!' % reverse('verification')
         messages.success(self.request, mark_safe(u"Your votes have been saved. %s Thank you for participating!" % msg))
         return super(VotingView, self).form_valid(form)
 

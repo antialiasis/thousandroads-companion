@@ -11,8 +11,8 @@
 
 <p>The following members have submitted nominations: {% for member in nominators %}{% if not forloop.first %}, {% endif %}<strong><a href="{% optional_year_url 'user_nominations' member=member.pk year=view.kwargs.year %}">{{member}}</a></strong>{% empty %}None{% endfor %}{% if nominators|length %} ({{nominators|length}} member{{nominators|length|pluralize}}){% endif %}</p>
 
-{% if user.is_staff and unverified_nominators %}
-<p>{% for member in unverified_nominators %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<strong><a href="{% optional_year_url 'user_nominations' member=member.pk year=view.kwargs.year %}">{{member}}</a></strong>{% endfor %} {{unverified_nominators|length|pluralize:"has, have"}} submitted unverified nominations.</p>
+{% if unverified_nominators %}
+<p>{% for member in unverified_nominators %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<strong><a href="{% optional_year_url 'user_nominations' member=member.pk year=view.kwargs.year %}">{{member}}</a></strong>{% endfor %} {{unverified_nominators|length|pluralize:"has, have"}} submitted unverified nominations. They will not be counted until they have verified their identity.</p>
 {% endif %}
 
 {% include "nomination_list.html" %}

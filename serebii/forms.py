@@ -67,7 +67,7 @@ def validate_verification_code(code, soup):
     except AttributeError:
         raise ValidationError(u"Could not find Biography field on profile page. If you submitted a valid profile link, please contact Dragonfree on the forums with your username so that you can be manually verified.")
     if code not in unicode(bio.get_text()):
-        raise ValidationError(u"Your verification code was not found in your profile's Biography section. Please ensure you followed the instructions correctly. If the problem persists, please contact Dragonfree on the forums with your username to be manually verified.")
+        raise ValidationError(u"Your verification code was not found in your profile's Biography section. Please ensure you followed the instructions correctly. If the problem persists, please contact Dragonfree on the forums to be manually verified.")
 
 
 class PasswordResetForm(forms.Form):
@@ -113,14 +113,20 @@ class VerificationForm(forms.Form):
     def __init__(self, user, *args, **kwargs):
         self.user = user
         super(VerificationForm, self).__init__(*args, **kwargs)
+        if user.member:
+            del self.fields['profile_url']
 
     def clean(self):
-        if 'profile_url' in self.cleaned_data:
+        if self.user.member:
+            profile_page = MemberPage.from_url(self.user.member.link() + '&simple=1', True)
+        elif 'profile_url' in self.cleaned_data:
             profile_page = self.cleaned_data['profile_url']
-            soup = profile_page.get_soup()
-            validate_verification_code(self.user.verification_code, soup)
-            self.member = profile_page.object
-            self.member.save()
+        else:
+            raise ValidationError(u"You must provide a profile URL.")
+        soup = profile_page.get_soup()
+        validate_verification_code(self.user.verification_code, soup)
+        self.member = profile_page.object
+        self.member.save()
         return self.cleaned_data
 
 
@@ -141,7 +147,7 @@ class TempUserProfileForm(forms.Form):
 
             # Check if there is already a user associated with this memebr
             if User.objects.filter(member=self.member).exists():
-                raise ValidationError(u"This member has already registered and verified or submitted votes under another username. Please log in to that account to submit or edit verified votes. If you did not register an account or submit votes, please contact Dragonfree.")
+                raise ValidationError(u"This member has already registered and verified or submitted votes/nominations under another username. Please log in to that account to submit or edit verified votes. If you did not register an account or submit votes, please contact Dragonfree.")
         return self.cleaned_data
 
     def create_temp_user(self):
