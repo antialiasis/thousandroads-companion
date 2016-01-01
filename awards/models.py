@@ -409,7 +409,7 @@ class PageViewManager(models.Manager):
         return self.update_or_create(user=user, page=page, defaults={})
 
     def get_last_pageview(self, user, page):
-        pageview = self.filter(user=user, page=page).first()
+        pageview = self.filter(user=user, page=page).first() if user.is_authenticated() else None
         return pageview.viewed_time if pageview else timezone.now()
 
 

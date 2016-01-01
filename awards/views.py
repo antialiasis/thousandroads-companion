@@ -54,7 +54,8 @@ class PageViewMixin(object):
         # We need to first calculate the response (which calls
         # get_context_data) before we add the new pageview.
         response = super(PageViewMixin, self).get(*args, **kwargs)
-        PageView.objects.add_pageview(self.request.user, self.page_name)
+        if self.request.user.is_authenticated():
+            PageView.objects.add_pageview(self.request.user, self.page_name)
         return response
 
     def get_context_data(self, **kwargs):
