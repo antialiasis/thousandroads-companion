@@ -188,7 +188,7 @@ class SerebiiObjectField(forms.MultiValueField):
             if data_list[0]:
                 # We have an existing fic/member selected
                 return data_list[0]
-            else:
+            elif data_list[1]:
                 # Return the fic object of the FicPage/MemberPage
                 return data_list[1].object
         return None
