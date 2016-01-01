@@ -183,6 +183,10 @@ class NominationSet(object):
     def get_votes(self):
         return sum(len(nomination.votes.all()) for nomination in self.nominations)
 
+    @property
+    def modified_date(self):
+        return max(nomination.modified_date for nomination in self.nominations)
+
     def __getattr__(self, name):
         return getattr(self.nominations[0], name)
 
