@@ -155,10 +155,10 @@ def validate_thread_fic(soup, thread_id, author):
         else:
             # We start at this page - 1
             pagenum = int(soup.find('span', class_="selected").get_text(strip=True))
-            nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
+            nextlink = (u'showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
 
         while pagenum > 0:
-            soup = get_soup('http://www.serebiiforums.com/{}'.format(nextlink))
+            soup = get_soup(u'http://www.serebiiforums.com/{}'.format(nextlink))
             userposts = get_user_post_times(soup, str(author))
 
             if not validate_fic_page(userposts):
@@ -167,7 +167,7 @@ def validate_thread_fic(soup, thread_id, author):
                 if userposts[0] < ELIGIBILITY_START:
                     return False
 
-                nextlink = ('showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
+                nextlink = (u'showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
                 pagenum -= 1
 
             else:
