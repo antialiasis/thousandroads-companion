@@ -166,7 +166,7 @@ class SerebiiObjectField(forms.MultiValueField):
         self.really_required = kwargs.pop('required', True)
         self.object_class = page_class.object_class
         # The actual field's queryset argument needs to be the entire collection of fics/members
-        object_dropdown = SerebiiObjectChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class))
+        object_dropdown = SerebiiObjectChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class), cache_choices=True)
         fields = [
             object_dropdown,
             SerebiiLinkField(page_class)
