@@ -158,7 +158,7 @@ class SerebiiObjectField(forms.MultiValueField):
     A field for entering a fic or member on Serebii.
 
     """
-    empty_values = [None, '', ['', ''], ['', '', False]]
+    empty_values = [None, '', ('', ''), ('', '', False)]
 
     def __init__(self, page_class, *args, **kwargs):
         # Must pretend the field isn't required even if it is, so that
@@ -259,7 +259,11 @@ class NominationForm(forms.ModelForm):
         return iter(self)
 
     def is_empty(self):
-        return all(self[field].data in self.fields[field].empty_values for field in self.fields)
+        def tuplify_list(value):
+            if isinstance(value, list):
+                return tuple(value)
+            return value
+        return all(tuplify_list(self[field].data) in self.fields[field].empty_values for field in self.fields)
 
     def is_unset(self):
         return not self.is_bound and self.instance.pk is None or self.is_empty()
@@ -277,6 +281,12 @@ class NominationForm(forms.ModelForm):
             if self_field != other_field:
                 return True
         return False
+
+    def _clean_fields(self):
+        # Don't clean fields if the form is empty.
+        if self.is_empty():
+            return
+        super(NominationForm, self)._clean_fields()
 
     def _post_clean(self):
         # The super method is responsible for running model cleaning.
