@@ -325,7 +325,11 @@ class BaseNominationFormSet(BaseFormSet):
         self.member = member
         super(BaseNominationFormSet, self).__init__(*args, **kwargs)
 
-        existing_data = self.member.nominations_by.from_year(year).order_by('pk')
+        if self.member:
+            existing_data = self.member.nominations_by.from_year(year).order_by('pk')
+        else:
+            existing_data = []
+
         existing_dict = {}
         for nomination in existing_data:
             if nomination.award_id in existing_dict:
