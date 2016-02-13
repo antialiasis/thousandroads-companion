@@ -43,3 +43,9 @@
 </form>
 {% endif %}
 {% endblock %}
+
+{% block scripts %}
+<script>
+    $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have cast a vote for:</div></div>');
+</script>
+{% endblock %}
