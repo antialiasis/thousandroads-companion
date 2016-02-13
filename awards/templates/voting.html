@@ -24,7 +24,7 @@
 {% else %}
 <p>Here, you can submit your votes for the {{year}} fanfic awards.</p>
 
-<p>You must place a vote in <strong>at least half of the available categories</strong>. This is intended to encourage you to broaden your horizons and read more stories, rather than only voting in those categories your existing favorite fics happen to be nominated in. If you can't muster a vote in half of the categories, read some of the stories nominated in other categories - you may find some new favorites!</p>
+<p>You must place a vote in <strong>at least half of the available categories, rounded up</strong>. This is intended to encourage you to broaden your horizons and read more stories, rather than only voting in those categories your existing favorite fics happen to be nominated in. If you can't muster a vote in half of the categories, read some of the stories nominated in other categories - you may find some new favorites!</p>
 
 <form action="{% url 'voting' %}" method="post">
 {% csrf_token %}
