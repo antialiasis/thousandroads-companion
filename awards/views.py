@@ -17,6 +17,7 @@ from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, Ba
 from awards.models import YearAward, Nomination, Phase, PageView
 from serebii.models import Member, Fic
 from serebii.forms import TempUserProfileForm
+from math import ceil
 
 
 def awards_context(request):
@@ -229,6 +230,7 @@ class VotingView(TempUserMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super(VotingView, self).get_context_data(**kwargs)
         context['year_awards'] = YearAward.objects.get_with_distinct_nominations()
+        context['award_requirement'] = int(ceil(len([award for award in context['year_awards'] if award.distinct_nominations]) / 2.0))
         return context
 
     def form_valid(self, form):
