@@ -48,7 +48,7 @@
 <script>
 
     // Add progress pop-up
-    $("body").append(`<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes (<span class="current-vote-field">0</span>/{{award_requirement}})</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have cast <span class="current-vote-field collapse-button">0</span> vote(s). You must cast <span id="required-vote-field" class="collapse-button">0</span> more to submit.</div></div>`);
+    $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes (<span class="current-vote-field">0</span>/{{award_requirement}})</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have cast <span class="current-vote-field collapse-button">0</span> vote(s).<p class="collapse-button">You must cast <span id="required-vote-field" class="collapse-button">0</span> more to submit.</p></div></div>');
 
     function update_progress() {
 
@@ -75,9 +75,9 @@
         $progress_list.append('<h4>Open Categories</h4>');
         var $unvoted_list = $('<ul class="list-unstyled">');
 
-        if (Object.keys(unvoted_categories).length > 0) {
+        if (!$.isEmptyObject(unvoted_categories)) {
             for (var cat in unvoted_categories) {
-                $unvoted_list.append($(`<li><a href="#${cat}">${unvoted_categories[cat]}</a></li>`));
+                $unvoted_list.append($('<li><a href="#' + cat + '">' + unvoted_categories[cat] + '</a></li>'));
             }
         }
         else {
