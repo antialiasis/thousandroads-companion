@@ -48,12 +48,11 @@
 <script>
 
     // Add progress pop-up
-    $("body").append(`<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes (<span id="current-vote-field">0</span>/{{award_requirement}})</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You need to cast <span id="required-vote-field" class="collapse-button">0</span> more vote(s).</div></div>`);
+    $("body").append(`<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes (<span class="current-vote-field">0</span>/{{award_requirement}})</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have cast <span class="current-vote-field collapse-button">0</span> vote(s). You must cast <span id="required-vote-field" class="collapse-button">0</span> more to submit.</div></div>`);
 
     function update_progress() {
 
         var current_votes = 0;
-        var voted_categories = {};
         var unvoted_categories = {};
 
         $("fieldset").each(function() {
@@ -63,7 +62,7 @@
                     unvoted_categories[$(this).attr("id")] = $(this).find("legend").text();
                 }
                 else {
-                    voted_categories[$(this).attr("id")] = $(this).find("legend").text();
+                    current_votes++;
                 }
             }
         });
@@ -73,7 +72,7 @@
         $progress_list.children(":not(.collapse-button)").remove();
 
         // Add uncast vote list
-        $progress_list.append('<h4>Uncast Votes</h4>');
+        $progress_list.append('<h4>Open Categories</h4>');
         var $unvoted_list = $('<ul class="list-unstyled">');
 
         if (Object.keys(unvoted_categories).length > 0) {
@@ -87,26 +86,8 @@
 
         $progress_list.append($unvoted_list);
 
-        // Add cast vote list
-        $progress_list.append('<h4>Cast Votes</h4>');
-        var $voted_list = $('<ul class="list-unstyled">');
-
-        if (Object.keys(voted_categories).length > 0) {
-
-            current_votes = Object.keys(voted_categories).length;
-
-            for (var cat in voted_categories) {
-                $voted_list.append($(`<li><a href="#${cat}">${voted_categories[cat]}</a></li>`));
-            }
-        }
-        else {
-            $voted_list.append($("<li>None</li>"));
-        }
-
-        $progress_list.append($voted_list);
-
         // Update number of votes cast/needed
-        $("#current-vote-field").text(current_votes);
+        $(".current-vote-field").text(current_votes);
         $("#required-vote-field").text(({{award_requirement}} - current_votes) >= 0 ? {{award_requirement}} - current_votes : 0);
     };
 
@@ -115,7 +96,6 @@
 
     // Update whenever a vote is cast or rescinded
     $(".nomination input").change(update_progress);
-
 
 </script>
 {% endblock %}
