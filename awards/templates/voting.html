@@ -50,19 +50,44 @@
     // Add progress pop-up
     $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes (<span class="current-vote-field">0</span>/{{award_requirement}})</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have cast <span class="current-vote-field collapse-button">0</span> vote(s).<p class="collapse-button">You must cast <span id="required-vote-field" class="collapse-button">0</span> more to submit.</p></div></div>');
 
+    // Load votes from localStorage if possible
+    if (localStorage && localStorage.getItem("current_votes")) {
+        var current_votes = $.parseJSON(localStorage.getItem("current_votes"));
+
+        for (var set_vote in current_votes) {
+            var $potential_vote = $("#" + set_vote).find("input[value='" + current_votes[set_vote] + "']");
+
+            // Remove any funky votes that somehow snuck aboard
+            if ($potential_vote.length > 0) {
+                $potential_vote.prop('checked', true);
+            } else {
+                delete current_votes[set_vote];
+            }
+        }
+
+    } else {
+        var current_votes = {};
+    }
+
     function update_progress() {
 
-        var current_votes = 0;
         var unvoted_categories = {};
+        var total_votes = 0;
 
         $("fieldset").each(function() {
-            vote = $(this).find("input:checked").val();
+            var vote = $(this).find("input:checked").val();
             if (typeof vote !== 'undefined') {
                 if (vote === "") {
                     unvoted_categories[$(this).attr("id")] = $(this).find("legend").text();
                 }
                 else {
-                    current_votes++;
+                    current_votes[$(this).attr("id")] = vote;
+
+                    // We need the length of this later
+                    // I believe any cross-browser solution
+                    // requires iterating over this to find the length
+                    // Therefore accumulating here to prevent iterating twice
+                    total_votes++;
                 }
             }
         });
@@ -87,8 +112,13 @@
         $progress_list.append($unvoted_list);
 
         // Update number of votes cast/needed
-        $(".current-vote-field").text(current_votes);
-        $("#required-vote-field").text(({{award_requirement}} - current_votes) >= 0 ? {{award_requirement}} - current_votes : 0);
+        $(".current-vote-field").text(total_votes);
+        $("#required-vote-field").text(({{award_requirement}} - total_votes) >= 0 ? {{award_requirement}} - total_votes : 0);
+
+        // Save votes to localStorage, if possible
+        if (localStorage && JSON) {
+            localStorage.setItem("current_votes", JSON.stringify(current_votes));
+        }
     };
 
     // Populate progress with initial votes
