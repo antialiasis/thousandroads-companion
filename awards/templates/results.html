@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+
+{% block active_voting_stats %} class="active"{% endblock %}
+
+{% block content %}
+<h1>{{year}} Fanfiction Awards Results</h1>
+
+{% if not phase == 'finished' %}
+<p>The awards are still underway! Check back later to see the results.</p>
+
+{% else %}
+
+{% include "nomination_list.html" %}
+
+{% endif %}
+
+{% endblock %}

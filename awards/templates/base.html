@@ -154,6 +154,7 @@ blockquote.detail {
 .nominator-info {
     font-size:12px;
     padding:5px 15px;
+    font-weight: normal;
 }
 
 .expand-info {
@@ -183,6 +184,12 @@ blockquote.detail {
         font-size:60%;
         vertical-align:middle;
         background:#FFCC00;
+    }
+
+    .nomination-place {
+        display: inline-block;
+        text-align: right;
+        width: 12em;
     }
 
     .nomination-votes {
@@ -249,6 +256,9 @@ blockquote.detail {
                         {% if user.is_staff %}
                     <li{% block active_voting_stats %}{% endblock %}><a href="{% url 'voting_stats' %}">Voting Stats</a></li>
                         {% endif %}
+                    {% endif %}
+                    {% if phase == 'finished' %}
+                    <li{% block active_results %}{% endblock %}><a href="{% url 'results' %}">Results</a></li>
                     {% endif %}
                     {% if user.is_authenticated %}
                         {% if not user.verified %}

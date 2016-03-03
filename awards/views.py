@@ -273,3 +273,37 @@ class VotingStatsView(ListView):
         context['voters'] = Member.objects.filter(verified_filter, votes__year=settings.YEAR).values_list('username', flat=True).distinct()
         context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
         return context
+
+class ResultsView(ListView):
+    """
+    A view that lets admins view voting results.
+
+    """
+    context_object_name = 'year_awards'
+    template_name = 'results.html'
+
+    def get_form_kwargs(self):
+        kwargs = super(VotingView, self).get_form_kwargs()
+        kwargs['year'] = settings.YEAR
+        return kwargs
+
+    def get_queryset(self):
+        awards = YearAward.objects.get_with_distinct_nominations(with_votes=True)
+        for award in awards:
+            for i, nomination in enumerate(award.distinct_nominations):
+                num_votes = nomination.get_votes()
+                high_place = i
+                low_place = i
+                while high_place > 0 and award.distinct_nominations[high_place - 1].get_votes() == num_votes:
+                    high_place -= 1
+                while low_place < len(award.distinct_nominations) - 1 and award.distinct_nominations[low_place + 1].get_votes() == num_votes:
+                    low_place += 1
+                nomination.place = [high_place + 1, low_place + 1]
+        return awards
+
+    def get_context_data(self, **kwargs):
+        context = super(ResultsView, self).get_context_data(**kwargs)
+        verified_filter = Q(user__isnull=True) | Q(user__verified=True)
+        context['voters'] = Member.objects.filter(verified_filter, votes__year=settings.YEAR).values_list('username', flat=True).distinct()
+        context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
+        return context
