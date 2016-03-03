@@ -5,9 +5,7 @@
 {% ifchanged award.award.category %}
 <h2>{{award.award.category}}</h2>
 {% endifchanged %}
-{% if not award.distinct_nominations and phase == 'finished' %}
-&nbsp;
-{% else %}
+{% if award.distinct_nominations or phase < 'finished' %}
 <fieldset id="field-award_{{award.award.pk}}">
 <legend>{{award.award}}</legend>
 {% if form %}
@@ -17,11 +15,12 @@
 <ul class="list-unstyled nomination-list striped">
 {% if form %}<li class="nomination"><label>{% voting_form_field award.award %} (No vote)</label></li>{% endif %}
 {% for nomination in award.distinct_nominations %}
-<li class="nomination" {% if phase == 'finished' and nomination.place.0 == 1 %}style="font-weight:bold"{% endif %}">{% if nomination.place and phase == 'finished' %}
+<li class="nomination{% if phase == 'finished' and nomination.place.0 == 1 %} winner{% endif %}">{% if nomination.place and phase == 'finished' %}
 <div class="nomination-place">
 {% if nomination.place.0 == nomination.place.1 %}{{nomination.place.0|ordinal}}{% else %}{{nomination.place.0|ordinal}}-{{nomination.place.1|ordinal}}{% endif %} place ({{nomination.get_votes}} vote{{nomination.get_votes|pluralize}}): </div>
 {% elif nomination.place %}<div class="nomination-votes">{{nomination.get_votes}} vote{{nomination.get_votes|pluralize}}: </div>{% endif %}
-<div class="nomination-line" {% if phase == 'finished' %}style="display:inline-block"{% endif %}>{% if form %}<label>{% voting_form_field award.award nomination %}{% endif %}<span>{{nomination.nomination_html|safe}}</span> {% if not form and last_pageview and nomination.modified_date > last_pageview %}<span class="label">NEW</span>{% endif %}{% if form %}</label>{% endif %}</div>
+<div class="nomination-line">{% if form %}<label>{% voting_form_field award.award nomination %}{% endif %}
+<span>{{nomination.nomination_html|safe}}</span> {% if not form and last_pageview and nomination.modified_date > last_pageview %}<span class="label">NEW</span>{% endif %}{% if form %}</label>{% endif %}</div>
 <div class="nominator-info">
 {% with nominator_details=nomination.get_nominator_details %}
 <p>Nominated by {% for nominator in nominator_details %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<a href="{% optional_year_url 'user_nominations' member=nominator.member.pk year=award.year %}">{{nominator.member}}</a>{% if user.is_staff %} [<a href="{% optional_year_url 'admin_nomination' member=nominator.member.pk year=award.year %}">edit</a>]{% endif %}{% endfor %}</p>

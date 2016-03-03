@@ -124,6 +124,10 @@
     // Populate progress with initial votes
     update_progress();
 
+    if (localStorage && JSON) {
+        $("form").before("<p>Your votes will be saved in your browser as you make them, so that you can always leave and return on the same computer without losing your votes - however, note that this means your votes haven't necessarily been submitted even if the page remembers them! To ensure your votes are counted, <strong>make sure you press the Submit Votes button at the bottom of the form once you have completed your ballot</strong>. Similarly, if you make any edits to your votes later, you must remember to resubmit them.</p>");
+    }
+
     // Update whenever a vote is cast or rescinded
     $(".nomination input").change(update_progress);
 
