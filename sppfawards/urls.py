@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse_lazy
 from django.views.generic.base import TemplateView
 from django.contrib.auth.views import login, logout
 from serebii.views import VerificationView, RegisterView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView
-from awards.views import NominationView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView
+from awards.views import NominationView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView, PastAwardsView
 from serebii.models import Member, Fic
 
 from django.contrib import admin
@@ -32,7 +32,9 @@ urlpatterns = patterns('',
     url(r'^voting/$', VotingView.as_view(), name='voting'),
     url(r'^voting/stats/$', VotingStatsView.as_view(), name='voting_stats'),
 
-    url(r'^results/$', ResultsView.as_view(), name='results'),
+    url(r'^results/(?:(?P<year>\d{4})/)?$', ResultsView.as_view(), name='results'),
+
+    url(r'^past_awards/$', PastAwardsView.as_view(), name='past_awards'),
 
     url(r'^admin/', include(admin.site.urls)),
 )

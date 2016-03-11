@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Past Awards{% endblock %}
+{% block active_past_awards %} class="active"{% endblock %}
+
+{% block content %}
+<p>The Serebii.net fanfiction forum has held awards annually since 2005. You can view the results of previous years at the links below:</p>
+<ul>
+    <li><a href="http://www.serebiiforums.com/showthread.php?74567-Summer-Fiction-Awards">2005 Summer Fiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?102363-Interview-With-The-Authors&p=3082611#post3082611">2006 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?250533-Fan-Fiction-Awards">2007 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?379903-2008-Fanfiction-Awards-Results-Are-In!">2008 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?445639-2009-Fanfiction-Awards-RESULTS">2009 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?494831-2010-Fanfiction-Awards-THE-RESULTS">2010 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?568381-2011-Fanfiction-Awards-THE-RESULTS">2011 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?606285-2012-Fanfiction-Awards-RESULTS">2012 Fanfiction Awards</a></li>
+    <li><a href="http://www.serebiiforums.com/showthread.php?630363-2013-Fanfiction-Awards-RESULTS">2013 Fanfiction Awards</a></li>
+
+    {% for award_year in years %}
+        {% if not forloop.last %}
+            <li><a href="{% url 'results' award_year %}">{{award_year}} Fanfiction Awards</a></li>
+        {% endif %}
+    {% endfor %}
+
+</ul>
+
+{% endblock %}
