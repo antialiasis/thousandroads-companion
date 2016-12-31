@@ -75,7 +75,10 @@ class YearlyData(models.Model):
     for easy querying of objects from the appropriate year.
 
     """
-    year = models.PositiveIntegerField(validators=[MinValueValidator(settings.MIN_YEAR), MaxValueValidator(settings.MAX_YEAR)], db_index=True, default=CURRENT_YEAR)
+    year = models.PositiveIntegerField(validators=[
+        MinValueValidator(settings.MIN_YEAR),
+        MaxValueValidator(settings.MAX_YEAR)
+    ], db_index=True, default=CURRENT_YEAR)
 
     objects = YearlyManager()
 
@@ -127,6 +130,7 @@ class Award(models.Model):
     has_detail = models.BooleanField(default=False)
     has_samples = models.BooleanField(default=False)
     requires_new = models.BooleanField(default=False)
+    detail_character_limit = models.PositiveIntegerField(blank=True, null=True)
     display_order = models.PositiveIntegerField(blank=True)
 
     class Meta:
@@ -151,7 +155,7 @@ class Award(models.Model):
 
 class NominationSet(object):
     """
-    A set of identical nominations to be regarded as one. The point of 
+    A set of identical nominations to be regarded as one. The point of
     this is to combine e.g. Person A's nomination for Pokémon
     Revelation: Cross of Fates for Best Pokémon Chaptered Fic with
     Person B's nomination for Pokémon Revelation: Cross of Fates for
@@ -263,16 +267,29 @@ class Nomination(YearlyData):
     def clean(self):
         if self.award.has_fic and not self.fic:
             raise ValidationError(u"You must nominate a valid fic for this award.")
+
         if self.award.has_person and not self.nominee:
             raise ValidationError(u"You must nominate a valid person for this award.")
+
         if self.award.has_detail and not self.detail:
             raise ValidationError(u"You must nominate a valid character/quote/scene for this award.")
+
         if self.award.has_samples and not self.link:
             raise ValidationError(u"You must provide a sample link for this award.")
+
         if self.nominee == self.member or self.fic and self.member in self.fic.authors.all():
             raise ValidationError(u"You cannot nominate yourself or your own work.")
+
         if self.award.requires_new and self.award.has_fic and self.fic.posted_date and self.fic.posted_date.year != settings.YEAR:
             raise ValidationError(u"Only stories posted after January 1st, %s UTC are eligible for this award." % settings.YEAR)
+
+        if self.award.has_detail and self.award.detail_character_limit is not None and len(self.detail) > self.award.detail_character_limit:
+            raise ValidationError(
+                u"The text you have nominated is %s characters long. The limit is %s characters. Please pick a shorter excerpt." % (
+                    len(self.detail),
+                    self.award.detail_character_limit
+                )
+            )
 
     def is_distinct_from(self, nomination):
         """
