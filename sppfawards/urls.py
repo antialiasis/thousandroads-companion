@@ -2,7 +2,7 @@ from django.conf.urls import patterns, include, url
 from django.core.urlresolvers import reverse_lazy
 from django.views.generic.base import TemplateView
 from django.contrib.auth.views import login, logout
-from serebii.views import VerificationView, RegisterView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView
+from serebii.views import VerificationView, RegisterView, EditUserInfoView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView
 from awards.views import NominationView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView
 from serebii.models import Member, Fic
 
@@ -19,6 +19,7 @@ urlpatterns = patterns('',
     url(r'^reset_password/user/(?P<pk>\d+)/$', PasswordResetView.as_view(), name='reset_password'),
     url(r'^logout/$', logout, {'next_page': reverse_lazy('home')}, name='logout'),
     url(r'^register/$', RegisterView.as_view(), name='register'),
+    url(r'^user_info/$', EditUserInfoView.as_view(), name='edit_user_info'),
     url(r'^verify/$', VerificationView.as_view(), name='verification'),
 
     url(r'^lookup/fic/$', SerebiiObjectLookupView.as_view(model=Fic), name='lookup_fic'),

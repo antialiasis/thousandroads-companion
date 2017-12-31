@@ -267,6 +267,7 @@ blockquote.detail {
                     <li{% block active_results %}{% endblock %}><a href="{% url 'results' %}">Results</a></li>
                     {% endif %}
                     {% if user.is_authenticated %}
+                    <li{% block active_edit_user_info %}{% endblock %}><a href="{% url 'edit_user_info' %}">Edit user info</a></li>
                         {% if not user.verified %}
                     <li{% block active_verification %}{% endblock %}><a href="{% url 'verification' %}">Verify user</a></li>
                         {% endif %}

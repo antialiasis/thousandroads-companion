@@ -10,9 +10,7 @@
 {% if not phase == 'voting' %}
 <p>The voting phase {% if phase < 'voting' %}has not started.{% if phase == 'nomination' %} <a href="{% url 'nomination' %}">Click here to enter your nominations.</a>{% endif %}{% else %}is over. Come back in time for next year's awards!{% endif %}</p>
 {% elif not user.is_authenticated %}
-<p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to vote.</strong> Doing so will allow you to return at any time during the voting phase to change your votes if you so desire and eliminates the need to manually confirm your identity on the forums after voting.</p>
-
-<p>However, if you'd rather not register, it is also possible to vote without it and be manually verified after submitting your votes. To do so, enter the link to your Serebii.net forums user profile into the form field below and press Continue. You can get this link by clicking <a href="http://www.serebiiforums.com/member.php" target="_blank">here</a> and copying the address it redirects you to, provided you are logged in to the forums.</p>
+<p>You are not logged in. To start voting, either <a href="{% url 'login' %}">log in</a> if you already have an account or simply enter the link to your Serebii.net forums user profile into the form field below and press Continue to quickly create a new one. You can get this link by clicking <a href="http://www.serebiiforums.com/member.php" target="_blank">here</a> and copying the address it redirects you to, provided you are logged in to the forums.</p>
 
 <form action="{% url 'voting' %}" method="post">
 {% csrf_token %}

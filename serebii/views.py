@@ -4,13 +4,13 @@ from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.views.generic.base import View
 from django.views.generic.detail import SingleObjectMixin
-from django.views.generic.edit import FormView, CreateView
+from django.views.generic.edit import FormView, CreateView, UpdateView
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import authenticate, login
 from serebii.models import User, Member, Fic
-from serebii.forms import VerificationForm, RegisterForm, UserLookupForm, PasswordResetForm
+from serebii.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm
 
 
 class JSONViewMixin(object):
@@ -34,6 +34,20 @@ class RegisterView(CreateView):
         user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password1'])
         login(self.request, user)
         return response
+
+
+class EditUserInfoView(UpdateView):
+    template_name = "edit_user_info.html"
+    model = User
+    form_class = UserInfoForm
+    success_url = reverse_lazy('edit_user_info')
+
+    def get_object(self):
+        return self.request.user
+
+    def form_valid(self, form):
+        messages.success(self.request, u"Your information has been successfully edited!")
+        return super(EditUserInfoView, self).form_valid(form)
 
 
 class VerificationView(FormView):
