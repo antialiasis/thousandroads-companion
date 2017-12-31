@@ -13,18 +13,9 @@
 {% else %}
 <p>To verify your Serebii.net forums identity so that your nominations and votes can be counted in the fanfiction awards, you must prove that you control an account on the forums. This can be done automatically using the form below{% if user.member %}, but if you prefer, you can also have your identity verified manually by <a href="http://www.serebiiforums.com/private.php?do=newpm&amp;u=388">sending a private message to Dragonfree</a> from your forum account{% endif %}.</p>
 
-<p>You can verify your identity by editing the "Biography" section on your user profile to contain a verification code unique to your fanfiction awards user account. Your verification code is <strong>{{user.verification_code}}</strong>. To verify yourself, simply perform the following steps:</p>
+<p>You can verify your identity automatically by editing the "Biography" section on your user profile to contain a verification code unique to your fanfiction awards user account. Your verification code is <strong>{{user.verification_code}}</strong>. To verify yourself, simply perform the following steps:</p>
 
-<ol>
-<li>Go to <strong><a href="http://www.serebiiforums.com/member.php?{% if user.member %}{{user.member.pk}}&amp;{% endif %}tab=aboutme" target="_blank">the About Me tab on your profile page</a></strong> on the forums. That link should take you there (opens in a new window/tab){% if not user.member %} if you are logged in to the forums{% endif %}.</li>
-<li>Click the small pencil icon next to the <strong>Biography</strong> label. This should turn the field into an editable box.</li>
-<li>Anywhere in the editable box, paste in the code <strong>{{user.verification_code}}</strong>.</li>
-<li>Press the "Save" button below the box. This should turn it back into text.</li>
-{% if not user.member %}
-<li>Copy your profile page's URL from your browser's address bar and paste it into the box below.</li>
-{% endif %}
-<li>Press the "Verify me!" button below. If you did everything correctly, you should be successfully verified and can remove the verification code from your profile.</li>
-</ol>
+{% include "verification_instructions.html" %}
 
 <form action="" method="post">
 {% csrf_token %}

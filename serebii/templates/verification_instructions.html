@@ -1,0 +1,10 @@
+<ol>
+<li>Go to <strong><a href="http://www.serebiiforums.com/member.php?{% if user.member %}{{user.member.pk}}&amp;{% endif %}tab=aboutme" target="_blank">the About Me tab on your profile page</a></strong> on the forums. That link should take you there (opens in a new tab/window){% if not user.member %} if you are logged in to the forums{% endif %}.</li>
+<li>Click the small pencil icon next to the <strong>Biography</strong> label. This should turn the field into an editable box.</li>
+<li>Anywhere in the editable box, paste in the code <strong>{{user.verification_code}}</strong>.</li>
+<li>Press the "Save" button below the box; this should turn it back into text. Return to this tab/window.</li>
+{% if not user.member %}
+<li>Copy your profile page's URL from your browser's address bar and paste it into the box below.</li>
+{% endif %}
+<li>Press the "{{button_text|default:"Verify me!"}}" button below. If you did everything correctly, you should be successfully verified and can remove the verification code from your profile.</li>
+</ol>
