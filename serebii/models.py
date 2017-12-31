@@ -229,7 +229,7 @@ class SerebiiPage(object):
         Extracts relevant parameters from a Serebii URL.
 
         """
-        url_regex = re.compile(r'^(?:http:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?(%s)' % (cls.page, cls.object_id_regex), re.U)
+        url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?(%s)' % (cls.page, cls.object_id_regex), re.U)
         match = url_regex.match(url)
         if match is None or not match.group(1): # The URL is invalid if the object ID match is zero-length
             raise ValueError(u"Invalid %s URL." % cls.__name__)
