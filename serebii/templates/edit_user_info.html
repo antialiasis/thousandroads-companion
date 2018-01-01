@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Edit User Info{% endblock %}
+
+{% block active_edit_user_info %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Edit User Info</h1>
+
+<p>Your current Serebii.Net Forums Fanfiction Awards username is <strong>{{user.username}}</strong>.{% if user.member %} You have connected the Serebii.Net Forums account {{user.member.link_html|safe}}{% if not user.verified %}, but <strong>you have not yet been <a href="{% url 'verification' %}">verified</a></strong>. Your nominations and votes will <strong>not</strong> be counted until you have been verified{% endif %}.{% else %} You have not yet connected a Serebii.Net Forums account. You can do so <a href="{% url 'verification' %}">here</a>.{% endif %}</p>
+
+<form action="" method="post">
+{% csrf_token %}
+{% include "form.html" %}
+<p><button type="submit" class="btn btn-primary">Save user info</button></p>
+</form>
+{% endblock %}
