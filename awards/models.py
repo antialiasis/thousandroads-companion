@@ -12,6 +12,114 @@ from serebii.models import Member, Fic, User
 
 CURRENT_YEAR = settings.YEAR
 
+ELIGIBILITY_START = datetime(int(CURRENT_YEAR), 1, 1, 0, 0, tzinfo=timezone.utc)
+ELIGIBILITY_END = datetime(int(CURRENT_YEAR) + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+ELIGIBILITY_ERROR_MESSAGE = u"This fanfic is not eligible for this year's awards. Please nominate a story posted/updated between 00:00 UTC January 1st {year} and 23:59 UTC December 31st {year}.".format(year=CURRENT_YEAR)
+
+
+def check_in_awards_year(date):
+    if date < ELIGIBILITY_END and date >= ELIGIBILITY_START:
+        return True
+    else:
+        return False
+
+
+def validate_fic_page(posts):
+    print u"Author post dates on this page:", [post.posted_date for post in posts]
+    return any(check_in_awards_year(post.posted_date) for post in posts)
+
+
+def validate_post_fic(page):
+    # Make sure this was posted in the awards year
+    return check_in_awards_year(page.get_post().posted_date)
+
+
+def validate_thread_fic(page):
+    # We need to check whether the 'fic was UPDATED in the awards year.
+    # First look at author's posts on the given page.
+    # If any are from the awards year, we don't need to go further.
+    author_ids = [author.user_id for author in page.object.get_authors()]
+    authorposts = [post for post in page.get_page_posts() if post.author.user_id in author_ids]
+
+    if not validate_fic_page(authorposts):
+        if not page.has_pages():
+            # This is the only page!
+            # The story can't possibly be eligible.
+            return False
+
+        elif not page.has_prev_page():
+            # This is the first page!
+            if authorposts[0].posted_date >= ELIGIBILITY_END:
+                # If the first post was made after the end of the awards year,
+                # the story can't possibly be eligible.
+                return False
+
+        elif not page.has_next_page():
+            # This is the last page!
+            # I don't believe this should be able to happen
+            # But just in case...
+            if authorposts[-1].posted_date < ELIGIBILITY_START:
+                # If the last post was made before the beginning of the awards year,
+                # the story can't possibly be eligible.
+                return False
+
+        # Nothing for it but to start working backward through the thread
+        # First, fetch the last page if we aren't there already
+        curpage = page.get_last_page()
+        if curpage is page:
+            curpage = curpage.get_prev_page()
+
+        while curpage:
+            authorposts = [post for post in curpage.get_page_posts() if post.author.user_id in author_ids]
+
+            if not validate_fic_page(authorposts):
+                # If the author's first post on this page is from before the awards year,
+                # the story can't possibly be eligible.
+                if authorposts[0].posted_date < ELIGIBILITY_START:
+                    return False
+
+                curpage = curpage.get_prev_page()
+            else:
+                break
+
+    return True
+
+
+def check_eligible(page):
+    # Only fics to actual eligibility checks at the moment
+    if not isinstance(page.object, Fic):
+        return True
+
+    fic = page.object
+
+    # First, check the eligibility cache
+    cached_eligible = FicEligibility.objects.get_eligible(fic.thread_id, fic.post_id)
+    eligible = cached_eligible
+
+    if cached_eligible is None:
+        # We didn't have eligibility info; figure out if the fic is
+        # actually eligible
+        if fic.posted_date and check_in_awards_year(fic.posted_date):
+            # If the posted_date is within the awards year, then the fic
+            # must be eligible
+            eligible = True
+        elif Nomination.objects.from_year().filter(fic=fic).exists():
+            # Otherwise, is the fic already nominated? Then we must have
+            # already checked it for eligibility
+            eligible = True
+        else:
+            # Do the full eligibility check
+            eligible = validate_post_fic(page) if fic.post_id else validate_thread_fic(page)
+
+        # Save the info we just fetched in the eligibility cache, but
+        # only if we're past the awards year (otherwise the fic could
+        # later become eligible for this year)
+        if timezone.now().year > settings.YEAR:
+            FicEligibility.objects.set_eligible(eligible, fic.thread_id, fic.post_id)
+
+    if not eligible:
+        raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
 
 class Phase(object):
     """
@@ -435,6 +543,11 @@ class PageViewManager(models.Manager):
 
 
 class PageView(models.Model):
+    """
+    A page view, used to keep track of when a user last viewed a page
+    so that we can show a "New" badge for new nominations/votes.
+
+    """
     user = models.ForeignKey(User)
     page = models.CharField(max_length=20)
     viewed_time = models.DateTimeField(auto_now=True)

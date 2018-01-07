@@ -113,7 +113,7 @@ class PasswordResetView(SingleObjectMixin, FormView):
 class SerebiiObjectLookupView(JSONViewMixin, View):
     model = None
 
-    def get_object(self):
+    def get_page(self):
         try:
             url = self.request.GET['url']
         except KeyError:
@@ -127,22 +127,23 @@ class SerebiiObjectLookupView(JSONViewMixin, View):
             return None
         if self.model == Fic and self.request.GET.get('type', 'thread') == 'thread':
             params['post_id'] = None
-        return self.model.from_params(save=True, **params)
+        return page_class.from_params(save=True, **params)
 
     def get(self, *args, **kwargs):
         try:
-            self.object = self.get_object()
+            page = self.get_page()
         except ValidationError as e:
             context = {'error': e.message}
         else:
-            if isinstance(self.object, Fic):
-                other_objects = [author.to_dict() for author in self.object.authors.all()]
+            obj = page.object
+            if isinstance(obj, Fic):
+                other_objects = [author.to_dict() for author in obj.authors.all()]
             else:
                 other_objects = []
 
-            if self.object is None:
+            if obj is None:
                 context = {'error': u"Lookup failed. Please double-check that you entered a valid URL."}
             else:
-                context = self.object.to_dict()
+                context = obj.to_dict()
                 context['other_objects'] = other_objects
         return self.render_to_json_response(context)

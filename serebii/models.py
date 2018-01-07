@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from dateutil import parser, tz
 from django.db import models
 from django.db.models import Q
@@ -11,72 +11,6 @@ from django.contrib.auth import logout
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from bs4 import BeautifulSoup
-
-
-ELIGIBILITY_START = datetime(int(settings.YEAR), 1, 1, 0, 0, tzinfo=timezone.utc)
-ELIGIBILITY_END = datetime(int(settings.YEAR) + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
-ELIGIBILITY_ERROR_MESSAGE = u"This fanfic is not eligible for this year's awards. Please nominate a story posted/updated between 00:00 UTC January 1st {} and 23:59 UTC December 31st {}.".format(settings.YEAR, settings.YEAR)
-
-
-def check_in_awards_year(date):
-    if date < ELIGIBILITY_END and date >= ELIGIBILITY_START:
-        return True
-    else:
-        return False
-
-
-def get_datetime_from_postdate(postdate, forum_time, tz_offset):
-    # First we have to get rid of "Yesterday" or "Today"
-    tz_string = get_tz_string(tz_offset)
-
-    now = timezone.now().astimezone(tz.tzoffset(None, tz_offset * 60 * 60))
-    if forum_time.hour == 23 and now.hour == 0:
-        # The forum time is actually still on the previous day
-        forum_today = now.date() - timedelta(days=1)
-    elif forum_time.hour == 0 and now.hour == 23:
-        # The forum time is on the next day
-        forum_today = now.date() + timedelta(days=1)
-    else:
-        forum_today = now.date()
-
-    if 'Yesterday' in postdate:
-        yesterday = forum_today - timedelta(days=1)
-        datebit = yesterday.strftime('%d/%m/%Y')
-        postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
-    if 'Today' in postdate:
-        datebit = forum_today.strftime('%d/%m/%Y')
-        postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
-
-    return parser.parse('{} {}'.format(postdate, tz_string)).astimezone(timezone.utc) 
-
-
-def get_user_post_times(soup, author):
-    usernames = soup.find_all('a', class_="username")
-    postdates = soup.find_all('span', class_="postdate")
-
-    forum_time, tz_offset = get_forum_time_info(soup)
-
-    userposts = [get_datetime_from_postdate(posted.get_text(strip=True), forum_time, tz_offset) for user, posted in zip(usernames, postdates) if author == user.get_text(strip=True)]
-
-    return userposts
-
-
-def validate_fic_page(posts):
-    return any(check_in_awards_year(date) for date in posts)
-
-
-def get_forum_time_info(page):
-    time_text = page.find('div', id="footer_time").get_text()
-    sentences = time_text.split('.')
-
-    tz_sentence = sentences[0]
-    offset = tz_sentence.split(' ')[-1]
-    offset = 0 if offset == 'GMT' else int(offset)
-
-    time_sentence = sentences[1]
-    time = ' '.join(time_sentence.split(' ')[-2:])
-
-    return (parser.parse(time), offset)
 
 
 def get_tz_string(offset):
@@ -94,88 +28,6 @@ def get_soup(url):
     return BeautifulSoup(request.text, 'html.parser')
 
 
-def get_post_author(post):
-    user_elem = post.find('div', class_="username_container").find(class_="username")
-    if user_elem.name == 'a':
-        # It's a registered user's linked username
-        username = user_elem.strong.get_text(strip=True)
-        user_id = MemberPage.get_params_from_url(user_elem['href'])['user_id']
-    else:
-        # It's (presumably) a guest
-        username = user_elem.get_text(strip=True)
-        user_id = None
-    return Member(user_id=user_id, username=username)
-
-
-def get_post_date(soup, post):
-    forum_time, tz_offset = get_forum_time_info(soup)
-    posted = post.find('span', class_="postdate").get_text(strip=True)
-    return get_datetime_from_postdate(posted, forum_time, tz_offset)
-
-
-def validate_post_fic(soup, post):
-    # Make sure this was posted in the awards year
-    return check_in_awards_year(get_post_date(soup, post))
-
-def validate_thread_fic(soup, thread_id, author):
-    # We need to check whether the 'fic was UPDATED in the  awards year
-    # First look at author's posts on the nominated page
-    # If any are from the awards year, we don't need to go further
-    userposts = get_user_post_times(soup, str(author))
-
-    if not validate_fic_page(userposts):
-        if not soup.find('span', class_="selected"):
-            # This is the only page!
-            # The story can't possibly be eligible.
-            return False
-
-        elif not soup.find('img', alt="Previous"):
-            # This is the first page!
-            if userposts[0] >= ELIGIBILITY_END:
-                # If the first post was made after the end of the awards year,
-                # the story can't possibly be eligible.
-                return False
-
-        elif not soup.find('img', alt='Next'):
-            # This is the last page!
-            # I don't believe this should be able to happen
-            # But just in case...
-            if userposts[-1] < ELIGIBILITY_START:
-                # If the last post was made before the beginning of the awards year,
-                # the story can't possibly be eligible.
-                return False
-
-        # Nothing for it but to start working backward through the thread
-        # First, fetch the last page if we aren't there already
-        lastimg = soup.find('img', alt='Last')
-
-        if lastimg:
-            nextlink = lastimg.parent['href']
-            pagenum = int(nextlink[nextlink.rfind('page') + 4:])
-        else:
-            # We start at this page - 1
-            pagenum = int(soup.find('span', class_="selected").get_text(strip=True))
-            nextlink = (u'showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
-
-        while pagenum > 0:
-            soup = get_soup(u'http://www.serebiiforums.com/{}'.format(nextlink))
-            userposts = get_user_post_times(soup, str(author))
-
-            if not validate_fic_page(userposts):
-                # If the author's first post on this page is from before the awards year,
-                # the story can't possibly be eligible.
-                if userposts[0] < ELIGIBILITY_START:
-                    return False
-
-                nextlink = (u'showthread.php?{}/page{}'.format(thread_id, pagenum - 1))
-                pagenum -= 1
-
-            else:
-                break
-
-    return True
-
-
 class SerebiiPage(object):
     """
     A base class for a Serebii page. MemberPage and FicPage inherit
@@ -189,6 +41,7 @@ class SerebiiPage(object):
     def __init__(self, obj, soup=None):
         self.object = obj
         self._soup = soup
+        self._time_info = None
 
     def __unicode__(self):
         return u"Serebii page for %s" % self.object
@@ -209,19 +62,29 @@ class SerebiiPage(object):
 
         """
         params = cls.get_params_from_url(url)  # Will raise ValueError if the URL is invalid
-        if not force_download:
-            return cls(cls.object_class.from_params(**params))
-        soup = get_soup(url)
-        obj = cls.object_from_soup(soup, **params)
-        return cls(obj, soup)
+        return cls.from_params(force_download=force_download, url=url, **params)
 
     @classmethod
-    def object_from_soup(cls, soup, **kwargs):
+    def from_params(cls, save=False, force_download=False, url=None, **kwargs):
         """
-        Returns an object corresponding to the given soup.
+        Returns a page object corresponding to the given params.
 
         """
-        return cls.object_class.from_soup(soup, **kwargs)
+        if not force_download:
+            try:
+                # See if we can get the object from the database just from the
+                # parameters
+                obj = cls.object_class.objects.get(**kwargs)
+                return cls(obj)
+            except (cls.object_class.DoesNotExist, cls.object_class.MultipleObjectsReturned):
+                pass
+        # Either this doesn't exist in the database, we can't uniquely
+        # determine the object from the URL parameters, or we simply need to
+        # refetch it for validation purposes, so fetch it from the forums
+        obj = cls.object_class(**kwargs)
+        page = cls(obj, get_soup(url) if url else None)
+        page.load_object(save)
+        return page
 
     @classmethod
     def get_params_from_url(cls, url):
@@ -231,10 +94,17 @@ class SerebiiPage(object):
         """
         url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?(%s)' % (cls.page, cls.object_id_regex), re.U)
         match = url_regex.match(url)
-        if match is None or not match.group(1): # The URL is invalid if the object ID match is zero-length
+        if match is None or not match.group(1):  # The URL is invalid if the object ID match is zero-length
             raise ValueError(u"Invalid %s URL." % cls.__name__)
         else:
             return match.groupdict()
+
+    def load_object(self, save=True):
+        """
+        Fetches the page from the forums and populates self.object with it.
+
+        """
+        pass
 
     def get_url(self):
         """
@@ -249,10 +119,29 @@ class SerebiiPage(object):
         we'll fetch the page first.
 
         """
-        if self._soup is not None:
-            return self._soup
-        else:
-            return get_soup(self.get_url())
+        if self._soup is None:
+            self._soup = get_soup(self.get_url())
+        return self._soup
+
+    def get_time_info(self):
+        """
+        Returns the forum's current date and timezone offset. This is
+        cached.
+
+        """
+        if not self._time_info:
+            time_text = self.get_soup().find('div', id="footer_time").get_text()
+            sentences = time_text.split('.')
+
+            tz_sentence = sentences[0]
+            offset = tz_sentence.split(' ')[-1]
+            offset = 0 if offset == 'GMT' else int(offset)
+
+            time_sentence = sentences[1]
+            time = ' '.join(time_sentence.split(' ')[-2:])
+
+            self._time_info = (parser.parse(time), offset)
+        return self._time_info
 
 
 class SerebiiObject(object):
@@ -260,38 +149,7 @@ class SerebiiObject(object):
     A base class mixin for Serebii objects.
 
     """
-    @classmethod
-    def from_soup(cls, soup, **kwargs):
-        """
-        Returns an object corresponding to the given soup.
-
-        """
-        return cls(**kwargs)
-
-    @classmethod
-    def from_params(cls, save=False, **kwargs):
-        """
-        Returns an object corresponding to the given params.
-
-        """
-        try:
-            # See if we can get the object from the database just from the
-            # parameters
-            obj = cls.objects.get(**kwargs)
-            if obj.can_skip_download():
-                # Only return the existing object if we don't need to check it
-                # for eligibility; otherwise we want to refetch it from the
-                # forums to validate it
-                return obj
-        except (cls.DoesNotExist, cls.MultipleObjectsReturned):
-            pass
-        # Either this doesn't exist in the database, we can't uniquely
-        # determine the object from the URL parameters, or we simply need to
-        # refetch it for validation purposes, so fetch it from the forums
-        obj = cls.from_soup(get_soup(cls(**kwargs).link()), **kwargs)
-        if save:
-            obj.save()
-        return obj
+    _page = None
 
     @classmethod
     def get_page_class(self):
@@ -306,13 +164,10 @@ class SerebiiObject(object):
         Returns a SerebiiPage instance corresponding to this object.
 
         """
+        if self._page:
+            return self._page
         page_class = self.__class__.get_page_class()
         return page_class(self)
-
-    def can_skip_download(self):
-        # By default, we can always skip downloads - we only need to implement
-        # special checks here if we have validation
-        return True
 
 
 class MemberQuerySet(models.QuerySet):
@@ -369,16 +224,20 @@ class Member(SerebiiObject, models.Model):
         self.user_id = int(self.user_id)
         return super(Member, self).save(*args, **kwargs)
 
-    @classmethod
-    def from_soup(cls, soup, user_id):
-        username = soup.find('span', class_=u"member_username").text
-        return cls(user_id=user_id, username=username)
-
 
 class MemberPage(SerebiiPage):
     page = 'member'
     object_id_regex = r'(?:u=)?(?P<user_id>\d+)'
     object_class = Member
+
+    def load_object(self, save=True):
+        soup = self.get_soup()
+        username = soup.find('span', class_=u"member_username").text
+        self.object.username = username
+        self.object._page = self
+        if save:
+            self.object.save()
+        return self.object
 
 
 def get_verification_code():
@@ -468,6 +327,9 @@ class Fic(SerebiiObject, models.Model):
     def to_dict(self):
         return {'type': 'fic', 'pk': self.pk, 'name': unicode(self), 'object': {'title': self.title, 'authors': [author.pk for author in self.authors.all()]}}
 
+    def get_authors(self):
+        return list(self.authors.all()) if self.pk else self._authors
+
     def link(self):
         if self.post_id:
             urlbit = u"p=%(post)s#post%(post)s" % {'post': self.post_id}
@@ -500,87 +362,6 @@ class Fic(SerebiiObject, models.Model):
             existing_authors = self.authors.all()
             self.authors.add(*[author for author in self._authors if author not in existing_authors])
 
-    def can_skip_download(self):
-        """
-        Check whether we can skip refetching this existing fic for an
-        eligibility check.
-
-        """
-        from awards.models import Nomination, FicEligibility
-
-        # If the posted_date is within the awards year, then we already know
-        # the fic is eligible and can skip the whole shebang
-        if check_in_awards_year(self.posted_date):
-            return True
-
-        # Otherwise, is the fic already nominated? Then we must have already
-        # checked it for eligibility
-        if Nomination.objects.from_year().filter(fic=self).exists():
-            return True
-
-        # Otherwise, check the eligibility cache
-        eligible = FicEligibility.objects.get_eligible(self.thread_id, self.post_id)
-        if eligible:
-            # We know the fic is valid, so yes, we can skip the validation
-            return True
-        elif eligible is None:
-            # We don't have eligibility information, so we can't skip the validation
-            return False
-        else:
-            # We know the fic is ineligible, so just raise the error straight away
-            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
-
-    @classmethod
-    def from_soup(cls, soup, thread_id, post_id):
-        from awards.models import FicEligibility
-        if thread_id is None and post_id is None:
-            raise ValidationError(u"You chose to nominate the thread, but you've entered a link to a post with no thread ID. Please enter a thread link.")
-
-        forum_link = soup.find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
-        if forum_link['href'] not in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics'):
-            raise ValidationError(u"This thread does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic.")
-
-        title_link = soup.find('span', class_="threadtitle").a
-
-        if thread_id is None:
-            thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
-
-        cached_eligible = FicEligibility.objects.get_eligible(thread_id, post_id)
-        eligible = cached_eligible
-
-        if post_id is not None:
-            # The fic starts in a particular post - use the author of the post and a placeholder title
-            post = soup.find(id="post_%s" % post_id)
-            title = "%s - post %s" % (title_link.get_text(strip=True), post_id)
-            author = get_post_author(post)
-            posted_date = get_post_date(soup, post)
-
-            if cached_eligible is None:
-                # We don't have eligibility info yet
-                eligible = validate_post_fic(soup, post)
-        else:
-            # The fic is a thread - use the thread title and the author of the first post
-            title = title_link.get_text(strip=True)
-            first_post = soup.find(id="posts").li
-            author = get_post_author(first_post)
-            posted_date = get_post_date(soup, first_post)
-
-            if cached_eligible is None:
-                # We don't have eligibility info yet
-                eligible = validate_thread_fic(soup, thread_id, author)
-
-        if cached_eligible is None and timezone.now().year > settings.YEAR:
-            # We didn't have cached eligibility info, so save the info we just fetched in the eligibility cache
-            # We never want to cache eligibility unless we're past the awards year
-            FicEligibility.objects.set_eligible(eligible, thread_id, post_id)
-
-        if not eligible:
-            raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
-
-        obj = cls(title=title, thread_id=thread_id, post_id=post_id, posted_date=posted_date)
-        obj._authors = [author]
-        return obj
-
 
 class FicPage(SerebiiPage):
     page = 'showthread'
@@ -597,3 +378,164 @@ class FicPage(SerebiiPage):
     # string, but we can handle that case separately.
     object_id_regex = r'(?:(?:t=)?(?P<thread_id>\d+)[^&]*)?(?:(?(thread_id)&)p=(?P<post_id>\d+))?'
     object_class = Fic
+
+    _pagination = None
+
+    def get_pagination(self):
+        if not self._pagination:
+            soup = self.get_soup()
+            self._pagination = soup.find('div', id='pagination_top')
+        return self._pagination
+
+    def get_last_page(self):
+        soup = self.get_soup()
+        lastimg = soup.find('img', alt='Last')
+
+        if lastimg:
+            return FicPage.from_url(u"http://www.serebiiforums.com/{}".format(lastimg.parent['href']), force_download=True)
+        else:
+            return self
+
+    def has_pages(self):
+        pagination = self.get_pagination()
+        page_span = pagination.find('span', class_="selected")
+        return bool(page_span)
+
+    def has_next_page(self):
+        pagination = self.get_pagination()
+        nextlink = pagination.find('a', rel='next')
+        return bool(nextlink)
+
+    def has_prev_page(self):
+        pagination = self.get_pagination()
+        prevlink = pagination.find('a', rel='prev')
+        return bool(prevlink)
+
+    def get_page_number(self):
+        pagination = self.get_pagination()
+        page_span = pagination.find('span', class_="selected")
+        if page_span:
+            return int(page_span.get_text(strip=True))
+        else:
+            return 1
+
+    def get_next_page(self):
+        pagination = self.get_pagination()
+        nextlink = pagination.find('a', rel='next')
+        if nextlink:
+            return FicPage.from_url(u"http://www.serebiiforums.com/{}".format(nextlink['href']), force_download=True)
+        else:
+            return None
+
+    def get_prev_page(self):
+        pagination = self.get_pagination()
+        prevlink = pagination.find('a', rel='prev')
+        if prevlink:
+            return FicPage.from_url(u"http://www.serebiiforums.com/{}".format(prevlink['href']), force_download=True)
+        else:
+            return None
+
+    def get_post(self):
+        if self.object.post_id:
+            return Post(self, self.get_soup().find(id="post_%s" % self.object.post_id))
+        else:
+            return Post(self, self.get_soup().find(id="posts").li)
+
+    def get_page_posts(self):
+        soup = self.get_soup()
+        return [Post(self, post) for post in soup.find(id="posts").find_all('li', recursive=False)]
+
+    def is_fic(self):
+        forum_link = self.get_soup().find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
+        return forum_link['href'] in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics')
+
+    def load_object(self, save=True):
+        if self.object.thread_id is None and self.object.post_id is None:
+            raise ValidationError(u"No parameters given")
+
+        soup = self.get_soup()
+
+        if not self.is_fic():
+            raise ValidationError(u"This thread does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic.")
+
+        title_link = soup.find('span', class_="threadtitle").a
+
+        if self.object.thread_id is None:
+            self.object.thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
+
+        post = self.get_post()
+
+        if self.object.post_id is not None:
+            # The fic starts in a particular post - use the author of the post and a placeholder title
+            title = "%s - post %s" % (title_link.get_text(strip=True), self.object.post_id)
+        else:
+            # The fic is a thread - use the thread title and the author of the first post
+            title = title_link.get_text(strip=True)
+
+        self.object.title = title
+        self.object.posted_date = post.posted_date
+        self.object._authors = [post.author]
+        self.object._page = self
+        if save:
+            self.object.save()
+        return self.object
+
+
+class Post(object):
+    def __init__(self, page, post_soup):
+        self.page = page
+        self._soup = post_soup
+
+    def __unicode__(self):
+        return u'Post #{} by {} in {} (posted {})'.format(self.post_id, self.author, self.page.object, self.posted_date)
+
+    def __repr__(self):
+        return u'<{}>'.format(self)
+
+    @property
+    def post_id(self):
+        return int(self._soup['id'][5:])
+
+    @property
+    def posted_date(self):
+        forum_time, tz_offset = self.page.get_time_info()
+        postdate = self._soup.find('span', class_="date").get_text(strip=True)
+
+        tz_string = get_tz_string(tz_offset)
+
+        now = timezone.now().astimezone(tz.tzoffset(None, tz_offset * 60 * 60))
+        if forum_time.hour == 23 and now.hour == 0:
+            # The forum time is actually still on the previous day
+            forum_today = now.date() - timedelta(days=1)
+        elif forum_time.hour == 0 and now.hour == 23:
+            # The forum time is on the next day
+            forum_today = now.date() + timedelta(days=1)
+        else:
+            forum_today = now.date()
+
+        if 'Yesterday' in postdate:
+            yesterday = forum_today - timedelta(days=1)
+            datebit = yesterday.strftime('%d/%m/%Y')
+            postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
+        if 'Today' in postdate:
+            datebit = forum_today.strftime('%d/%m/%Y')
+            postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
+
+        return parser.parse('{} {}'.format(postdate, tz_string)).astimezone(timezone.utc)
+
+    @property
+    def author(self):
+        user_elem = self._soup.find(class_="username")
+        if user_elem.name == 'a':
+            # It's a registered user's linked username
+            username = user_elem.strong.get_text(strip=True)
+            try:
+                user_id = int(MemberPage.get_params_from_url(user_elem['href'])['user_id'])
+            except ValueError:
+                # It's a deleted post and we can't get a proper URL - let's make it a guest.
+                user_id = None
+        else:
+            # It's (presumably) a guest
+            username = user_elem.get_text(strip=True)
+            user_id = None
+        return Member(user_id=user_id, username=username)

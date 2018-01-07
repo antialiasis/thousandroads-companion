@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.forms.formsets import BaseFormSet
 from django.forms.models import ModelChoiceIterator
 from django.utils.html import mark_safe
-from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR
+from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR, check_eligible
 from serebii.models import Member, MemberPage, Fic, FicPage
 from serebii.forms import SerebiiLinkField
 
@@ -189,7 +189,7 @@ class SerebiiObjectField(forms.MultiValueField):
                 # We have an existing fic/member selected
                 return data_list[0]
             elif data_list[1]:
-                # Return the fic object of the FicPage/MemberPage
+                # Return the object of the FicPage/MemberPage.
                 return data_list[1].object
         return None
 
@@ -215,6 +215,10 @@ class SerebiiObjectField(forms.MultiValueField):
         # Just save during clean - having more fics/members in the
         # database can only be a good thing.
         value = super(SerebiiObjectField, self).clean(value)
+
+        # Validate eligibility
+        check_eligible(value.get_page())
+
         if value is not None:
             value.save()
         return value
@@ -390,7 +394,6 @@ class BaseNominationFormSet(BaseFormSet):
                         if not form.is_distinct_from(other_form):
                             form.errors['__all__'] = form.error_class([u"You cannot make the same nomination twice in the same category."])
                 award_dict[form.award].append(form)
-
 
         for (fic, nominations) in fic_nominations.items():
             if nominations > settings.MAX_FIC_NOMINATIONS:
