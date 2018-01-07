@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse_lazy
 from django.views.generic.base import TemplateView
 from django.contrib.auth.views import login, logout
 from serebii.views import VerificationView, RegisterView, EditUserInfoView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView
-from awards.views import NominationView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView, PastAwardsView
+from awards.views import NominationView, NominationLookupView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView, PastAwardsView
 from serebii.models import Member, Fic
 
 from django.contrib import admin
