@@ -10,9 +10,7 @@
 {% if not phase == 'nomination' %}
 <p>The nomination phase has {% if phase < 'nomination' %}not yet started{% else %}concluded{% endif %}. {% if phase == 'voting' %}<a href="{% url 'voting' %}">Click here to vote for your favorites.</a>{% elif phase < 'nomination' %}Keep an eye out for news of when nominations start!{% else %}Come back in time for next year's awards!{% endif %}</p>
 {% elif not user.is_authenticated %}
-<p><strong>It is highly recommended that you <a href="{% url 'register' %}">register</a> to nominate.</strong> Doing so will allow you to return at any time during the nomination phase to change your nominations if you so desire and eliminates the need to manually confirm your identity on the forums after nominating.</p>
-
-<p>However, if you'd rather not register, it is also possible to nominate without it and be manually verified after submitting your nominations. To do so, enter the link to your Serebii.net forums user profile into the form field below and press Continue. You can get this link by clicking <a href="http://www.serebiiforums.com/member.php" target="_blank">here</a> and copying the address it redirects you to, provided you are logged in to the forums.</p>
+<p>You are not logged in. To start nominating, either <a href="{% url 'login' %}">log in</a> if you already have an account or simply enter the link to your Serebii.net forums user profile into the form field below and press Continue to quickly create a new one. You can get this link by clicking <a href="http://www.serebiiforums.com/member.php" target="_blank">here</a> and copying the address it redirects you to, provided you are logged in to the forums.</p>
 
 <form action="{% url 'nomination' %}" method="post">
 {% csrf_token %}
@@ -55,7 +53,7 @@ Please correct the errors below.
 {% ifchanged award.grouper.category %}
 <h2>{{award.grouper.category}}</h2>
 {% endifchanged %}
-<div class="panel {% if award.list.0.errors or award.list.1.errors %}panel-danger{% else %}panel-default{% endif %}">
+<div id="award-{{award.grouper.id}}" class="panel {% if award.list.0.errors or award.list.1.errors %}panel-danger{% else %}panel-default{% endif %}">
 <div class="panel-heading" title="{{award.grouper.description}}">
 <h3 class="panel-title">{{award.grouper}} <small>{% if not award.list.0.is_unset and not award.list.1.is_unset %}2 nominations{% elif not award.list.0.is_unset or not award.list.1.is_unset %}1 nomination{% else %}0 nominations{% endif %}</small></h3>
 </div>
@@ -136,8 +134,8 @@ Please correct the errors below.
 
 
     var lookup_urls = {
-        fic: '{% url 'lookup_fic' %}',
-        nominee: '{% url 'lookup_member' %}'
+        fic: '{% url 'nomination_lookup_fic' %}',
+        nominee: '{% url 'nomination_lookup_member' %}'
     };
 
     function add_to_selects(field_name, object) {

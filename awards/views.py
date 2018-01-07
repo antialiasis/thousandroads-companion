@@ -14,9 +14,10 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
-from awards.models import YearAward, Nomination, Phase, PageView
+from awards.models import YearAward, Nomination, Phase, PageView, check_eligible
 from serebii.models import Member, Fic
 from serebii.forms import TempUserProfileForm
+from serebii.views import SerebiiObjectLookupView
 from math import ceil
 
 
@@ -213,6 +214,17 @@ class AdminNominationView(NominationView):
         if not self.request.user.is_staff:
             raise PermissionDenied
         return super(AdminNominationView, self).dispatch(*args, **kwargs)
+
+
+class NominationLookupView(SerebiiObjectLookupView):
+    model = None
+
+    def get_page(self):
+        page = super(NominationLookupView, self).get_page()
+
+        check_eligible(page)
+
+        return page
 
 
 class VotingView(TempUserMixin, FormView):

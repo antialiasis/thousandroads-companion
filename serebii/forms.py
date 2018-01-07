@@ -2,9 +2,11 @@ import re
 import requests
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.urlresolvers import reverse
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.utils.crypto import get_random_string
+from django.utils.html import format_html
 from serebii.models import Member, User, MemberPage
 
 
@@ -101,6 +103,34 @@ class PasswordResetForm(forms.Form):
         return self.user
 
 
+class UserInfoForm(forms.ModelForm):
+    """
+    A form to edit a user's username and password.
+
+    """
+    password1 = forms.CharField(label=u"New password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label=u"Confirm password", widget=forms.PasswordInput)
+
+    class Meta:
+        model = User
+        fields = ('username',)
+
+    def clean(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        if password1 and password2:
+            if password1 != password2:
+                raise forms.ValidationError(u"The two password fields didn't match.")
+
+        return self.cleaned_data
+
+    def save(self, commit=True):
+        user = super(UserInfoForm, self).save(commit=False)
+        user.set_password(self.cleaned_data['password1'])
+        if commit:
+            user.save()
+        return user
+
 
 class VerificationForm(forms.Form):
     """
@@ -145,16 +175,27 @@ class TempUserProfileForm(forms.Form):
             self.member = profile_page.object
             self.member.save()
 
-            # Check if there is already a user associated with this memebr
-            if User.objects.filter(member=self.member).exists():
-                raise ValidationError(u"This member has already registered and verified or submitted votes/nominations under another username. Please log in to that account to submit or edit verified votes. If you did not register an account or submit votes, please contact Dragonfree.")
+            # Check if there is already a user associated with this member
+            user = User.objects.filter(member=self.member).order_by('verified', 'id').first()
+            if user:
+                raise ValidationError(format_html(
+                    u"There is already an existing account for this member under the username <strong>{}</strong>. Please either <a href=\"{}\">log in to that account</a>, <a href=\"{}\">reset its password</a> by verifying your Serebii.net forums account, or <a href=\"{}\">register a new account</a>.",
+                    user.username,
+                    reverse('login'),
+                    reverse('reset_password', kwargs={'pk': user.pk}),
+                    reverse('register')
+                ))
         return self.cleaned_data
 
     def create_temp_user(self):
         if not self.is_valid():
             raise ValidationError(u"A temporary user cannot be created.")
 
-        username = "%s-%s" % (re.sub(r'[^\w.@+-]', '', self.member.username), get_random_string(5))
+        username = re.sub(r'[^\w.@+-]', '', self.member.username)
+
+        while User.objects.filter(username=username).exists():
+            username += "-%s" % get_random_string(5)
+
         password = get_random_string(20)
         user = User.objects.create_user(username=username, password=password, member=self.member)
 
