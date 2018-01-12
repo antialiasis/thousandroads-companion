@@ -119,6 +119,10 @@ def check_eligible(page):
 
     if not eligible:
         raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+    else:
+        # We don't know if this user is actually allowed to nominate this
+        # But it is eligible! Save it so it gets added to the list of eligible fics
+        fic.save()
 
 
 class Phase(object):
