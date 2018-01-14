@@ -295,9 +295,11 @@ class ResultsView(ListView):
     def get_context_data(self, **kwargs):
         context = super(ResultsView, self).get_context_data(**kwargs)
 
-        context['year'] = self.kwargs.get('year') or settings.YEAR
+        context['year'] = int(self.kwargs.get('year') or settings.YEAR)
+        context['results_ready'] = context['year'] < settings.YEAR or Phase.get_current() == 'finished'
 
         return context
+
 
 class VotingStatsView(ResultsView):
     """
@@ -317,6 +319,7 @@ class VotingStatsView(ResultsView):
         context['voters'] = Member.objects.filter(verified_filter, votes__year=settings.YEAR).values_list('username', flat=True).distinct()
         context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
         return context
+
 
 class PastAwardsView(ListView):
     """
