@@ -52,10 +52,12 @@ class Command(BaseCommand):
                     print "Created new YearAward:", year_award
 
         fic_map = {}
+        username_map = {}
 
         for id, title, threadid, postid, author_username in fics:
             fic = FicPage.from_params(thread_id=threadid, post_id=postid, save=True).object
             fic_map[id] = fic
+            username_map[author_username] = fic.get_authors()[0]
 
         link_map = {}
 
@@ -73,9 +75,14 @@ class Command(BaseCommand):
                 'year': year
             }
             if award.has_person:
-                params['nominee'], new = Member.objects.get_or_create(username=author)
-                if new:
-                    print "Created new member:", params['nominee']
+                if author in username_map:
+                    # We've already found out who this username is! Use that member
+                    params['nominee'] = username_map[author]
+                else:
+                    # Get or create a member with the given username
+                    params['nominee'], new = Member.objects.get_or_create(username=author)
+                    if new:
+                        print "Created new member:", params['nominee']
             if award.has_fic:
                 params['fic'] = fic_map[ficid]
             if award.has_detail:
@@ -112,9 +119,12 @@ class Command(BaseCommand):
 
         for username, vote, cat, year in votes:
             if voter_map[year][username] and vote in nomination_map:
-                member, new = Member.objects.get_or_create(username=username)
-                if new:
-                    print "Created new member:", member
+                if username in username_map:
+                    member = username_map[username]
+                else:
+                    member, new = Member.objects.get_or_create(username=username)
+                    if new:
+                        print "Created new member:", member
                 v, new = Vote.objects.get_or_create(year=year, member=member, award=awards_map[cat], defaults={'nomination': nomination_map[vote], 'verified': True})
                 if new:
                     print "Created vote:", v
