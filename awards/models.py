@@ -18,6 +18,10 @@ ELIGIBILITY_ERROR_MESSAGE = u"This fanfic is not eligible for this year's awards
 
 
 def check_in_awards_year(date):
+    """
+    Returns True if the given date is within the current year (UTC).
+
+    """
     if date < ELIGIBILITY_END and date >= ELIGIBILITY_START:
         return True
     else:
@@ -25,16 +29,31 @@ def check_in_awards_year(date):
 
 
 def validate_fic_page(posts):
-    print u"Author post dates on this page:", [post.posted_date for post in posts]
+    """
+    Returns True if any of the given posts was posted within the
+    current year.
+
+    """
     return any(check_in_awards_year(post.posted_date) for post in posts)
 
 
 def validate_post_fic(page):
+    """
+    Returns True if the given FicPage for a post fic was posted in the
+    current year (and thus is eligible for nomination), or False
+    otherwise.
+
+    """
     # Make sure this was posted in the awards year
     return check_in_awards_year(page.get_post().posted_date)
 
 
 def validate_thread_fic(page):
+    """
+    Returns True if the given FicPage was likely updated in the current
+    year (and thus is eligible for nomination), or False otherwise.
+
+    """
     # We need to check whether the 'fic was UPDATED in the awards year.
     # First look at author's posts on the given page.
     # If any are from the awards year, we don't need to go further.
@@ -86,6 +105,10 @@ def validate_thread_fic(page):
 
 
 def check_eligible(page):
+    """
+    Check if the given SerebiiPage is eligible to be nominated (this year).
+
+    """
     # Only fics to actual eligibility checks at the moment
     if not isinstance(page.object, Fic):
         return True
@@ -119,6 +142,19 @@ def check_eligible(page):
 
     if not eligible:
         raise ValidationError(ELIGIBILITY_ERROR_MESSAGE)
+
+
+def verify_current(member):
+    """
+    Find any current nominations/votes by this member and verify them.
+    Should be run when a member is verified.
+
+    """
+    phase = Phase.get_current()
+    if phase == 'nomination':
+        Nomination.objects.from_year().filter(member=member, verified=False).update(verified=True)
+    elif phase == 'voting':
+        Vote.objects.from_year().filter(member=member, verified=False).update(verified=True)
 
 
 class Phase(object):
@@ -346,9 +382,9 @@ class YearAward(YearlyData):
         return u"%s - %s awards" % (self.award, self.year)
 
     def get_nominations(self, with_votes=False):
-        nominations = Nomination.objects.from_year(self.year).filter(Q(member__user__isnull=True) | Q(member__user__verified=True), award=self.award).distinct()
+        nominations = Nomination.objects.from_year(self.year).filter(verified=True, award=self.award).distinct()
         if with_votes:
-            nominations = nominations.prefetch_related(Prefetch('votes', Vote.objects.filter(member__user__verified=True).distinct()))
+            nominations = nominations.prefetch_related(Prefetch('votes', Vote.objects.filter(verified=True).distinct()))
             nominations = sorted(nominations, key=lambda nomination: len(nomination.votes.all()), reverse=True)
         return nominations
 
@@ -368,6 +404,7 @@ class Nomination(YearlyData):
     link = models.URLField(blank=True, null=True, help_text=u"A link to a sample (generally a post) illustrating your nomination.")
     comment = models.TextField(blank=True, help_text=u"Optionally, you may write a comment explaining why you feel this nomination deserves the award. Users will be able to see this on the voting form. Basic BBCode allowed.")
     modified_date = models.DateTimeField(auto_now=True)
+    verified = models.BooleanField(default=False)
 
     def __unicode__(self):
         return u"%s nominated for %s in %s" % (self.nomination_text(), self.award, self.year)
@@ -486,6 +523,7 @@ class Vote(YearlyData):
     member = models.ForeignKey(Member, related_name='votes')
     award = models.ForeignKey(Award, related_name='votes')
     nomination = models.ForeignKey(Nomination, related_name='votes')
+    verified = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('member', 'award', 'year')

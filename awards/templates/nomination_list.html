@@ -26,7 +26,7 @@
 <p>Nominated by {% for nominator in nominator_details %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<a href="{% optional_year_url 'user_nominations' member=nominator.member.pk year=award.year %}">{{nominator.member}}</a>{% if user.is_staff %} [<a href="{% optional_year_url 'admin_nomination' member=nominator.member.pk year=award.year %}">edit</a>]{% endif %}{% endfor %}</p>
 
 {% if award.award.has_samples %}
-<p>Samples: {% for nominator in nominator_details %}{% if not forloop.first %}, {% endif %}<a href="{{nominator.link}}">({{nominator.member}})</a>{% endfor %}
+<p>Samples: {% for nominator in nominator_details %}{% if not forloop.first %}, {% endif %}{% if nominator.link %}<a href="{{nominator.link}}">({{nominator.member}})</a>{% else %}(none){% endif %}{% endfor %}
 {% endif %}
 
 {% for nominator in nominator_details %}
