@@ -29,8 +29,17 @@ class AwardAdmin(admin.ModelAdmin):
     list_select_related = ('category',)
 
 
+class NominationAdmin(admin.ModelAdmin):
+    list_display = ('award', 'nomination_text', 'member')
+    list_display_links = ('nomination_text',)
+    list_select_related = ('fic', 'nominee', 'member', 'award')
+    list_filter = ('year',)
+    search_fields = ('member__username', 'award__name', 'fic__title')
+    ordering = ['-year', 'award']
+
+
 admin.site.register(Category)
 admin.site.register(Award, AwardAdmin)
 admin.site.register(YearAward, YearAwardsAdmin)
 admin.site.register(FicEligibility)
-admin.site.register(Nomination)
+admin.site.register(Nomination, NominationAdmin)

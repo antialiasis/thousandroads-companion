@@ -411,7 +411,12 @@ class Nomination(YearlyData):
     verified = models.BooleanField(default=False)
 
     def __unicode__(self):
-        return u"%s nominated for %s in %s" % (self.nomination_text(), self.award, self.year)
+        return u"{award} ({year}): {nomination} ({member})".format(
+            award=self.award,
+            year=self.year,
+            nomination=self.nomination_text(),
+            member=self.member
+        )
 
     def clean(self):
         if self.award.has_fic and not self.fic:
