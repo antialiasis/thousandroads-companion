@@ -200,7 +200,68 @@ Please correct the errors below.
         }
     }
 
+    function localStorage_save($elem, current_nominations, lookup_type, data_type) {
+        // Adds a changed nomination field to the list of current nominations
+        // then saves it in localStorage
+        id_root = $elem.attr('id').slice(0, $elem.attr('id').lastIndexOf('-'))
+        if (current_nominations.hasOwnProperty(id_root)) {
+            current_nominations[id_root][data_type] = $.trim($elem.val());
+
+            if (current_nominations[id_root]["type"] === '') {
+                current_nominations[id_root]["type"] = lookup_type;
+            }
+        }
+        else {
+            current_nominations[id_root] = new Object();
+            current_nominations[id_root][data_type] = $.trim($elem.val());
+            current_nominations[id_root]["type"] = lookup_type;
+        }
+
+        if (localStorage && JSON) {
+            localStorage.setItem("current_nominations", JSON.stringify(current_nominations));
+        }
+    }
+
     $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Nominations</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have nominated:</div></div>');
+
+    // Load nominations from localStorage if possible
+    if (localStorage && localStorage.getItem("current_nominations")) {
+        var current_nominations = $.parseJSON(localStorage.getItem("current_nominations"));
+
+        for (var saved_nomination in current_nominations) {
+            // First, redo the lookup on this nomination if possible
+            if (current_nominations[saved_nomination].hasOwnProperty('url')) {
+
+                if (current_nominations[saved_nomination].type === 'post' || current_nominations[saved_nomination].type == 'thread') {
+                    // Single-post nominations need special handling
+                    $unverified_nomination = $('#' + saved_nomination + '-fic_1');
+                    $unverified_nomination.val(current_nominations[saved_nomination].url);
+                    lookup($unverified_nomination, 'fic', { type: current_nominations[saved_nomination].type });
+                }
+                else {
+                    if (current_nominations[saved_nomination].type === 'fic') {
+                        $unverified_nomination = $('#' + saved_nomination + '-fic_1');
+                    }
+                    else {
+                        $unverified_nomination = $('#' + saved_nomination + '-nominee_1');
+                    }
+
+                    $unverified_nomination.val(current_nominations[saved_nomination].url);
+                    lookup($unverified_nomination, current_nominations[saved_nomination].type);
+                }
+            }
+
+            // Now set associated comment, detail, etc.
+            for (var property in current_nominations[saved_nomination]) {
+                if (property != 'url' && current_nominations[saved_nomination].hasOwnProperty(property)) {
+                    $('#' + saved_nomination + '-' + property).val(current_nominations[saved_nomination][property]);
+                }
+            }
+        }
+    }
+    else {
+        current_nominations = {};
+    }
 
     function update_progress() {
         var nominated_fics = {};
@@ -325,7 +386,13 @@ Please correct the errors below.
             var num_nominations = $(this).find("select").filter(function() { return $(this).val(); }).length;
             $(this).find(".panel-heading small").text(num_nominations + " nomination" + (num_nominations === 1 ? "" : "s"));
         });
+
     }
+
+    if (localStorage && JSON) {
+        $("form").before("<p>Your nominations will be saved in your browser as you make them, so you can leave and return on the same computer without losing anything--however, note that this means your nominations haven't necessarily been submitted even if the page remembers them! To ensure your nominations are included, <strong>make sure you press the Submit nominations button at the bottom of the form once you're done nominating</strong>. Similarly, if you make any edits to your nominations later, you must remember to resubmit them.</p>");
+    }
+
     update_progress();
 
     $(".field-fic input[type=text]").blur(function() {
@@ -336,17 +403,37 @@ Please correct the errors below.
         }
         else {
             lookup($(this), 'fic');
+
+            if (localStorage && JSON) {
+                localStorage_save($(this), current_nominations, 'fic', 'url')
+            }
         }
     });
 
     $(".field-nominee input").blur(function() {
         lookup($(this), 'nominee');
+
+        if (localStorage && JSON) {
+            localStorage_save($(this), current_nominations, 'nominee', 'url')
+        }
+            
+    });
+
+    $(".field-comment textarea, .field-detail textarea, .field-link input").blur(function() {
+        data_type = ($(this).attr('id').slice($(this).attr('id').lastIndexOf('-') + 1, $(this).attr('id').length));
+        if (localStorage && JSON) {
+            localStorage_save($(this), current_nominations, '', data_type);
+        }
     });
 
     $(".field-fic select, .field-nominee select").change(update_progress);
 
     $(".field-fic").on('click', ".post-link-button", function() {
-        lookup($(this).closest(".field-fic").find("input[type=text]"), 'fic', { type: this.value });
+        var $single_post_element = $(this).closest(".field-fic").find("input[type=text]");
+        lookup($single_post_element, 'fic', { type: this.value });
+        if (localStorage && JSON) {
+            localStorage_save($single_post_element, current_nominations, this.value, 'url');
+        }
     });
 </script>
 {% endblock %}
