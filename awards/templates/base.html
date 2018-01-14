@@ -276,6 +276,7 @@ blockquote.detail {
                     {% if phase == 'finished' %}
                     <li{% block active_results %}{% endblock %}><a href="{% url 'results' %}">Results</a></li>
                     {% endif %}
+                    <li{% block active_past_awards %}{% endblock %}><a href="{% url 'past_awards' %}">Past Awards</a></li>
                     {% if user.is_authenticated %}
                     <li{% block active_edit_user_info %}{% endblock %}><a href="{% url 'edit_user_info' %}">Edit user info</a></li>
                         {% if not user.verified %}

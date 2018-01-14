@@ -185,6 +185,7 @@ class AllNominationsView(PageViewMixin, ListView):
 
         context['nominators'] = Member.objects.filter(nominations_by__year=year, nominations_by__verified=True).distinct()
         context['unverified_nominators'] = Member.objects.filter(nominations_by__year=year, nominations_by__verified=False).distinct()
+        context['year'] = year
         return context
 
 
@@ -277,7 +278,8 @@ class ResultsView(ListView):
     template_name = 'results.html'
 
     def get_queryset(self):
-        awards = YearAward.objects.get_with_distinct_nominations(with_votes=True)
+        awards = YearAward.objects.get_with_distinct_nominations(with_votes=True, year=self.kwargs.get('year') or settings.YEAR)
+
         for award in awards:
             for i, nomination in enumerate(award.distinct_nominations):
                 num_votes = nomination.get_votes()
@@ -290,6 +292,12 @@ class ResultsView(ListView):
                 nomination.place = [high_place + 1, low_place + 1]
         return awards
 
+    def get_context_data(self, **kwargs):
+        context = super(ResultsView, self).get_context_data(**kwargs)
+
+        context['year'] = self.kwargs.get('year') or settings.YEAR
+
+        return context
 
 class VotingStatsView(ResultsView):
     """
@@ -309,3 +317,13 @@ class VotingStatsView(ResultsView):
         context['voters'] = Member.objects.filter(verified_filter, votes__year=settings.YEAR).values_list('username', flat=True).distinct()
         context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
         return context
+
+class PastAwardsView(ListView):
+    """
+        A view that lets users view information about previous years' awards.
+    """
+    context_object_name = 'years'
+    template_name = 'past_awards.html'
+
+    def get_queryset(self):
+        return YearAward.objects.values_list('year', flat=True).order_by('year').distinct()
