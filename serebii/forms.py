@@ -6,8 +6,9 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
 from django.utils.crypto import get_random_string
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from serebii.models import Member, User, MemberPage
+from awards.models import Phase
 
 
 class SerebiiLinkField(forms.CharField):
@@ -139,12 +140,23 @@ class VerificationForm(forms.Form):
 
     """
     profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. http://www.serebiiforums.com/member.php?388-Dragonfree", force_download=True)
+    verify_current = forms.BooleanField(required=False, label=u"Verify existing nominations/votes?", help_text=mark_safe(u"This member has already submitted unverified nominations/votes. To verify them now, check this box. <strong>Do not check this box if you didn't submit these nominations/votes!</strong> You can verify them later by resubmitting them."))
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
+        self.made_unverified = kwargs.pop('has_unverified', False)
         super(VerificationForm, self).__init__(*args, **kwargs)
+        has_unverified = False
         if user.member:
             del self.fields['profile_url']
+            if not self.made_unverified:
+                phase = Phase.get_current()
+                if phase == 'nomination':
+                    has_unverified = user.member.nominations_by.from_year().filter(verified=False).exists()
+                elif phase == 'voting':
+                    has_unverified = user.member.votes.from_year().filter(verified=False).exists()
+        if not has_unverified:
+            del self.fields['verify_current']
 
     def clean(self):
         if self.user.member:

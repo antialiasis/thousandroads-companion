@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse, reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import authenticate, login
+from awards.models import verify_current, Phase, CURRENT_YEAR
 from serebii.models import User, Member, Fic
 from serebii.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm
 
@@ -58,12 +59,21 @@ class VerificationView(FormView):
     def get_form_kwargs(self):
         kwargs = super(VerificationView, self).get_form_kwargs()
         kwargs['user'] = self.request.user
+        phase = Phase.get_current()
+        if phase == 'nomination':
+            kwargs['has_unverified'] = self.request.session.get('unverified_nominations_%s' % CURRENT_YEAR, False)
+        elif phase == 'voting':
+            kwargs['has_unverified'] = self.request.session.get('unverified_votes_%s' % CURRENT_YEAR, False)
+        else:
+            kwargs['has_unverified'] = False
         return kwargs
 
     def form_valid(self, form):
         self.request.user.member = form.member
         self.request.user.verified = True
         self.request.user.save()
+        if form.made_unverified or form.cleaned_data.get('verify_current'):
+            verify_current(form.member)
         messages.success(self.request, u"You have been successfully verified as %s! You can change your Biography profile field on the forums back now, if you like." % form.member)
         return super(VerificationView, self).form_valid(form)
 

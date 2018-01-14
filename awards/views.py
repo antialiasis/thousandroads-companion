@@ -14,8 +14,8 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
-from awards.models import YearAward, Nomination, Phase, PageView, check_eligible
-from serebii.models import Member, Fic
+from awards.models import YearAward, Nomination, Phase, PageView, check_eligible, verify_current
+from serebii.models import Member, MemberPage, Fic
 from serebii.forms import TempUserProfileForm
 from serebii.views import SerebiiObjectLookupView
 from math import ceil
@@ -143,18 +143,24 @@ class NominationView(TempUserMixin, FormSetView):
     extra = 0
     success_url = reverse_lazy('nomination')
     template_name = "nomination.html"
-    temp_user_success_message = 'After making your nominations, you <strong>must</strong> <a href="%s">verify your account</a> to confirm your identity.'
+    temp_user_success_message = 'After making your nominations, you <strong>must</strong> <a href="%s">verify your account</a> to confirm your identity, or your nominations will not be counted.'
 
     def get_formset_kwargs(self):
         kwargs = super(NominationView, self).get_formset_kwargs()
         kwargs['year'] = settings.YEAR
         kwargs['member'] = self.request.user.member
+        kwargs['user'] = self.request.user
         return kwargs
 
     def formset_valid(self, formset):
         formset.save()
         msg = "You may return here at any point until the end of the nomination phase to change your nominations." if self.request.user.verified else 'Remember, in order for your nominations to be counted you <strong>must</strong> <a href="%s">verify your identity</a> to confirm that this is you!' % reverse('verification')
         messages.success(self.request, mark_safe(u"Your nominations have been saved. %s" % msg))
+        if self.request.user.verified:
+            # Verify all the nominations
+            verify_current(self.request.user.member)
+        else:
+            self.request.session['unverified_nominations_%s' % settings.YEAR] = True
         return super(NominationView, self).formset_valid(formset)
 
     def get_context_data(self, **kwargs):
@@ -175,11 +181,11 @@ class AllNominationsView(PageViewMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(AllNominationsView, self).get_context_data(**kwargs)
 
-        context['year'] = self.kwargs.get('year') or settings.YEAR
-        verified_filter = Q(user__isnull=True) | Q(user__verified=True)
+        year = self.kwargs.get('year') or settings.YEAR
 
-        context['nominators'] = Member.objects.filter(verified_filter, nominations_by__year=context['year']).distinct()
-        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=context['year']).exclude(verified_filter).distinct()
+        context['nominators'] = Member.objects.filter(nominations_by__year=year, nominations_by__verified=True).distinct()
+        context['unverified_nominators'] = Member.objects.filter(nominations_by__year=year, nominations_by__verified=False).distinct()
+        context['year'] = year
         return context
 
 
@@ -199,6 +205,12 @@ class UserNominationsView(ListView):
 class AdminNominationView(NominationView):
     """
     A view to let admins submit nominations as other users.
+    (This is used to allow admins to edit e.g. a nomination for "Bob
+    and Alice" to match another member's nomination for "Alice and Bob",
+    plus if nominations need to be entered into the system by the admins
+    for some other reason - such as when manually entering nominations
+    from previous years. Nobody's nefariously impersonating anyone,
+    promise.)
 
     """
     def get_success_url(self):
@@ -207,7 +219,8 @@ class AdminNominationView(NominationView):
     def get_formset_kwargs(self):
         kwargs = super(NominationView, self).get_formset_kwargs()
         kwargs['year'] = self.kwargs.get('year') or settings.YEAR
-        kwargs['member'] = Member.from_params(user_id=self.kwargs['member'], save=True)
+        kwargs['member'] = MemberPage.from_params(user_id=self.kwargs['member'], save=True).object
+        kwargs['user'] = self.request.user
         return kwargs
 
     def dispatch(self, *args, **kwargs):
@@ -249,6 +262,10 @@ class VotingView(TempUserMixin, FormView):
         form.save()
         msg = "You may return here at any point until the end of the voting phase to change your votes." if self.request.user.verified else 'Remember, in order for your votes to be counted you <strong>must</strong> <a href="%s">verify your identity</a> to confirm that this is you!' % reverse('verification')
         messages.success(self.request, mark_safe(u"Your votes have been saved. %s Thank you for participating!" % msg))
+        if self.request.user.verified:
+            verify_current(self.request.user.member)
+        else:
+            self.request.session['unverified_votes_%s' % settings.YEAR] = True
         return super(VotingView, self).form_valid(form)
 
 
@@ -278,9 +295,11 @@ class ResultsView(ListView):
     def get_context_data(self, **kwargs):
         context = super(ResultsView, self).get_context_data(**kwargs)
 
-        context['year'] = self.kwargs.get('year') or settings.YEAR
+        context['year'] = int(self.kwargs.get('year') or settings.YEAR)
+        context['results_ready'] = context['year'] < settings.YEAR or Phase.get_current() == 'finished'
 
         return context
+
 
 class VotingStatsView(ResultsView):
     """
@@ -300,6 +319,7 @@ class VotingStatsView(ResultsView):
         context['voters'] = Member.objects.filter(verified_filter, votes__year=settings.YEAR).values_list('username', flat=True).distinct()
         context['unverified_voters'] = Member.objects.filter(votes__year=settings.YEAR).exclude(verified_filter).values_list('username', flat=True).distinct()
         return context
+
 
 class PastAwardsView(ListView):
     """

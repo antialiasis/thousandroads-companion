@@ -297,11 +297,6 @@ class Fic(SerebiiObject, models.Model):
     """
     A fic, defined by its Serebii thread and possibly post ID.
 
-    Right now, all fics are threads. Automating the detection of
-    individual posts constituting separate fics is a hard problem.
-    Maybe I will be motivated to figure it out if some multi-fic
-    threads actually get nominated.
-
     """
     title = models.CharField(max_length=255)
     authors = models.ManyToManyField(Member, related_name='fics')
@@ -447,16 +442,17 @@ class FicPage(SerebiiPage):
 
     def is_fic(self):
         forum_link = self.get_soup().find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
+        print forum_link
         return forum_link['href'] in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics')
 
     def load_object(self, save=True):
         if self.object.thread_id is None and self.object.post_id is None:
-            raise ValidationError(u"No parameters given")
+            raise ValidationError(u"No parameters given.")
 
         soup = self.get_soup()
 
         if not self.is_fic():
-            raise ValidationError(u"This thread does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic.")
+            raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic." % self.object.link())
 
         title_link = soup.find('span', class_="threadtitle").a
 

@@ -236,10 +236,11 @@ class NominationForm(forms.ModelForm):
         model = Nomination
         fields = ('nominee', 'fic', 'detail', 'link', 'comment')
 
-    def __init__(self, year, member, award, *args, **kwargs):
+    def __init__(self, year, member, award, user, *args, **kwargs):
         self.year = year
         self.member = member
         self.award = award
+        self.user = user
 
         super(NominationForm, self).__init__(*args, **kwargs)
 
@@ -314,6 +315,7 @@ class NominationForm(forms.ModelForm):
             instance.year = self.year
             instance.member = self.member
             instance.award = self.award
+            instance.verified = self.user.is_staff or self.user.member == self.member and self.user.verified
             if commit:
                 instance.save()
             return instance
@@ -324,7 +326,7 @@ class BaseNominationFormSet(BaseFormSet):
     The formset for the full nomination form.
 
     """
-    def __init__(self, year, member, *args, **kwargs):
+    def __init__(self, year, member, user, *args, **kwargs):
         self.year = year
         self.member = member
         super(BaseNominationFormSet, self).__init__(*args, **kwargs)
@@ -347,7 +349,8 @@ class BaseNominationFormSet(BaseFormSet):
                 form_kwargs = {
                     'year': year,
                     'member': member,
-                    'award': year_award.award
+                    'award': year_award.award,
+                    'user': user
                 }
                 try:
                     form_kwargs['instance'] = existing_dict.get(year_award.award.pk, [])[i]

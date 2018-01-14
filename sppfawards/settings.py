@@ -68,6 +68,8 @@ MIN_YEAR = 2008
 
 MAX_YEAR = 2017  # This should be changed every year
 
+SYSTEM_START_YEAR = 2014
+
 YEAR = int(os.environ.get('YEAR', MAX_YEAR))
 
 def parse_environ_date(key):
