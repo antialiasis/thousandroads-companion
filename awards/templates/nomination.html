@@ -204,12 +204,24 @@ Please correct the errors below.
         // Adds a changed nomination field to the list of current nominations
         // then saves it in localStorage
         id_root = $elem.attr('id').slice(0, $elem.attr('id').lastIndexOf('-'))
-        if (current_nominations.hasOwnProperty(id_root)) {
+
+        // First, was this a change or a deletion? If the element is empty, remove it
+        if ($elem.val() === "") {
+            delete current_nominations[id_root][data_type];
+        }
+        else if (current_nominations.hasOwnProperty(id_root)) {
             current_nominations[id_root][data_type] = $.trim($elem.val());
 
             if (current_nominations[id_root]["type"] === '') {
                 current_nominations[id_root]["type"] = lookup_type;
             }
+
+            // If this is a select drop-down being updated,
+            // delete the "url" parameter if it exists
+            if (current_nominations[id_root].hasOwnProperty('pk') && current_nominations[id_root].hasOwnProperty('url')) {
+                delete current_nominations[id_root].url;
+            }
+
         }
         else {
             current_nominations[id_root] = new Object();
@@ -250,13 +262,60 @@ Please correct the errors below.
                     lookup($unverified_nomination, current_nominations[saved_nomination].type);
                 }
             }
+            else if (current_nominations[saved_nomination].hasOwnProperty('pk')) {
+                // The item should be in the db already, just not in the drop-down
+                // So add it to the drop-down if necessary!
+
+                // First, create the object we need to use the add_to_selects function
+                if (current_nominations[saved_nomination].type === 'fic') {
+                    var nomination_info = fics[current_nominations[saved_nomination].pk];
+
+                    author_names = [];
+                    // Reconstruct the proper name from fic/author data
+                    $.each(nomination_info.authors, function(value) {
+                        author_names.push(authors[nomination_info.authors[value]].username);
+                    });
+
+                    if (author_names.length == 1) {
+                        final_names = author_names[0];
+                    }
+                    else if (author_names.length == 2) {
+                        final_names = author_names[0] + ' and ' + author_names[1];
+                    }
+                    else {
+                        last_two = author_names.slice(Math.max(author_names.length - 2, 1))
+                        final_names = author_names.slice(0, author_names.length - 2).join(', ') + ', ' + last_two[0] + ' and ' + last_two[1];
+                    }
+
+                    nomination_info.name = nomination_info.title + ' by ' + final_names
+
+                }
+                else {
+                    var nomination_info = authors[current_nominations[saved_nomination].pk];
+                    nomination_info.name = nomination_info.username;
+                }
+
+                nomination_info.pk = current_nominations[saved_nomination].pk
+
+                add_to_selects(current_nominations[saved_nomination].type, nomination_info);
+
+                // Now select it!
+                if (current_nominations[saved_nomination].type === 'fic') {
+                    $('#' + saved_nomination + '-fic_0').val(nomination_info.pk).change();
+                }
+                else {
+                    $('#' + saved_nomination + '-nominee_0').val(nomination_info.pk).change();
+                }
+
+            }
 
             // Now set associated comment, detail, etc.
             for (var property in current_nominations[saved_nomination]) {
-                if (property != 'url' && current_nominations[saved_nomination].hasOwnProperty(property)) {
+                if (property != 'url' && property != 'field_0' && current_nominations[saved_nomination].hasOwnProperty(property)) {
                     $('#' + saved_nomination + '-' + property).val(current_nominations[saved_nomination][property]);
                 }
             }
+
         }
     }
     else {
@@ -403,20 +462,11 @@ Please correct the errors below.
         }
         else {
             lookup($(this), 'fic');
-
-            if (localStorage && JSON) {
-                localStorage_save($(this), current_nominations, 'fic', 'url')
-            }
         }
     });
 
     $(".field-nominee input").blur(function() {
         lookup($(this), 'nominee');
-
-        if (localStorage && JSON) {
-            localStorage_save($(this), current_nominations, 'nominee', 'url')
-        }
-            
     });
 
     $(".field-comment textarea, .field-detail textarea, .field-link input").blur(function() {
@@ -426,14 +476,24 @@ Please correct the errors below.
         }
     });
 
-    $(".field-fic select, .field-nominee select").change(update_progress);
+    $(".field-fic select, .field-nominee select").change(function () {
+
+        update_progress();
+
+        if (localStorage && JSON) {
+            // We're looking for "fic" in the id
+            if ($(this).attr('id').slice(-3, -2) === 'c') {
+                localStorage_save($(this), current_nominations, 'fic', 'pk');
+            }
+            else {
+                localStorage_save($(this), current_nominations, 'nominee', 'pk');
+            }
+        }
+    });
 
     $(".field-fic").on('click', ".post-link-button", function() {
         var $single_post_element = $(this).closest(".field-fic").find("input[type=text]");
         lookup($single_post_element, 'fic', { type: this.value });
-        if (localStorage && JSON) {
-            localStorage_save($single_post_element, current_nominations, this.value, 'url');
-        }
     });
 </script>
 {% endblock %}
