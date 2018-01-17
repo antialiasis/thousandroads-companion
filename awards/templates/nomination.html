@@ -289,8 +289,10 @@ Please correct the errors below.
                     }
                 }
                 else {
-                    nomination_info = authors[current_nominations[saved_nomination].pk];
-                    nomination_info.name = nomination_info.username;
+                    if (current_nominations[saved_nomination].pk) {
+                        nomination_info = authors[current_nominations[saved_nomination].pk];
+                        nomination_info.name = nomination_info.username;
+                    }
                 }
 
                 if (nomination_info) {
