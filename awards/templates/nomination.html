@@ -206,10 +206,7 @@ Please correct the errors below.
         id_root = $elem.attr('id').slice(0, $elem.attr('id').lastIndexOf('-'))
 
         // First, was this a change or a deletion? If the element is empty, remove it
-        if ($elem.val() === "") {
-            delete current_nominations[id_root][data_type];
-        }
-        else if (current_nominations.hasOwnProperty(id_root)) {
+        if (current_nominations.hasOwnProperty(id_root)) {
             current_nominations[id_root][data_type] = $.trim($elem.val());
 
             if (current_nominations[id_root]["type"] === '') {
@@ -221,7 +218,6 @@ Please correct the errors below.
             if (current_nominations[id_root].hasOwnProperty('pk') && current_nominations[id_root].hasOwnProperty('url')) {
                 delete current_nominations[id_root].url;
             }
-
         }
         else {
             current_nominations[id_root] = new Object();
@@ -267,38 +263,44 @@ Please correct the errors below.
                 // So add it to the drop-down if necessary!
 
                 // First, create the object we need to use the add_to_selects function
+                var nomination_info = null;
                 if (current_nominations[saved_nomination].type === 'fic') {
-                    var nomination_info = fics[current_nominations[saved_nomination].pk];
+                    if (current_nominations[saved_nomination].pk) {
+                        nomination_info = fics[current_nominations[saved_nomination].pk];
 
-                    author_names = [];
-                    // Reconstruct the proper name from fic/author data
-                    $.each(nomination_info.authors, function(value) {
-                        author_names.push(authors[nomination_info.authors[value]].username);
-                    });
+                        author_names = [];
+                        // Reconstruct the proper name from fic/author data
+                        $.each(nomination_info.authors, function(value) {
+                            author_names.push(authors[nomination_info.authors[value]].username);
+                        });
 
-                    if (author_names.length == 1) {
-                        final_names = author_names[0];
+                        if (author_names.length == 1) {
+                            final_names = author_names[0];
+                        }
+                        else if (author_names.length == 2) {
+                            final_names = author_names[0] + ' and ' + author_names[1];
+                        }
+                        else {
+                            last_two = author_names.slice(Math.max(author_names.length - 2, 1))
+                            final_names = author_names.slice(0, author_names.length - 2).join(', ') + ', ' + last_two[0] + ' and ' + last_two[1];
+                        }
+
+                        nomination_info.name = nomination_info.title + ' by ' + final_names
                     }
-                    else if (author_names.length == 2) {
-                        final_names = author_names[0] + ' and ' + author_names[1];
-                    }
-                    else {
-                        last_two = author_names.slice(Math.max(author_names.length - 2, 1))
-                        final_names = author_names.slice(0, author_names.length - 2).join(', ') + ', ' + last_two[0] + ' and ' + last_two[1];
-                    }
-
-                    nomination_info.name = nomination_info.title + ' by ' + final_names
-
                 }
                 else {
-                    var nomination_info = authors[current_nominations[saved_nomination].pk];
+                    nomination_info = authors[current_nominations[saved_nomination].pk];
                     nomination_info.name = nomination_info.username;
                 }
 
-                nomination_info.pk = current_nominations[saved_nomination].pk
+                if (nomination_info) {
+                    nomination_info.pk = current_nominations[saved_nomination].pk
 
-                add_to_selects(current_nominations[saved_nomination].type, nomination_info);
-
+                    add_to_selects(current_nominations[saved_nomination].type, nomination_info);
+                } else {
+                    // It's an empty nomination
+                    nomination_info = {pk: ''};
+                }
                 // Now select it!
                 if (current_nominations[saved_nomination].type === 'fic') {
                     $('#' + saved_nomination + '-fic_0').val(nomination_info.pk).change();
