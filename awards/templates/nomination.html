@@ -339,7 +339,11 @@ Please correct the errors below.
             // Now set associated comment, detail, etc.
             for (var property in current_nominations[saved_nomination]) {
                 if (property != 'url' && property != 'field_0' && current_nominations[saved_nomination].hasOwnProperty(property)) {
-                    $('#' + saved_nomination + '-' + property).val(current_nominations[saved_nomination][property]);
+                    var $elem = $('#' + saved_nomination + '-' + property);
+                    $elem.val(current_nominations[saved_nomination][property]);
+                    if ($elem.is("textarea")) {
+                        resize_textarea.call($elem.get(0));
+                    }
                 }
             }
 
