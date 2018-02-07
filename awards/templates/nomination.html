@@ -72,6 +72,7 @@ Please correct the errors below.
 
 {% block scripts %}
 <script>
+    'use strict';
     var fics = {
         {% for fic in all_fics %}
         {{fic.pk}}: {
@@ -203,7 +204,7 @@ Please correct the errors below.
     function localStorage_save($elem, current_nominations, lookup_type, data_type) {
         // Adds a changed nomination field to the list of current nominations
         // then saves it in localStorage
-        id_root = $elem.attr('id').slice(0, $elem.attr('id').lastIndexOf('-'))
+        var id_root = $elem.attr('id').slice(0, $elem.attr('id').lastIndexOf('-'))
 
         // First, was this a change or a deletion? If the element is empty, remove it
         if (current_nominations.hasOwnProperty(id_root)) {
@@ -232,13 +233,34 @@ Please correct the errors below.
 
     $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Nominations</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have nominated:</div></div>');
 
+    var current_nominations;
+
     // Load nominations from localStorage if possible
     if (localStorage && localStorage.getItem("current_nominations")) {
-        var current_nominations = $.parseJSON(localStorage.getItem("current_nominations"));
+        current_nominations = $.parseJSON(localStorage.getItem("current_nominations"));
 
         for (var saved_nomination in current_nominations) {
+            var form_num = saved_nomination.split('-')[1] * 1;
+            var base_form_num = Math.floor(form_num / 2) * 2;
+            var paired_form = 'id_form-' + (base_form_num + (1 + base_form_num - form_num));
+
+            if (!(paired_form in current_nominations)) {
+                if (current_nominations[saved_nomination].type === 'fic' &&
+                    current_nominations[saved_nomination].pk === $('#' + paired_form + '-fic_0').val() && (
+                        !current_nominations[saved_nomination].detail ||
+                        current_nominations[saved_nomination].detail === $('#' + paired_form + '-detail').val()
+                    ) ||
+                    current_nominations[saved_nomination].type === 'nominee' &&
+                    current_nominations[saved_nomination].pk === $('#' + paired_form + '-nominee_0').val()
+                ) {
+                    // This nomination is the same as the paired one, on which we have no saved information. This is most likely because we entered a nomination into the second form, which was then loaded into the first form when it came back from the server. Let's put our saved stuff into the paired form instead and pretend we're dealing with that!
+                    current_nominations[paired_form] = current_nominations[saved_nomination];
+                    saved_nomination = paired_form;
+                }
+            }
             // First, redo the lookup on this nomination if possible
             if (current_nominations[saved_nomination].hasOwnProperty('url')) {
+                var $unverified_nomination;
 
                 if (current_nominations[saved_nomination].type === 'post' || current_nominations[saved_nomination].type == 'thread') {
                     // Single-post nominations need special handling
@@ -268,7 +290,8 @@ Please correct the errors below.
                     if (current_nominations[saved_nomination].pk) {
                         nomination_info = fics[current_nominations[saved_nomination].pk];
 
-                        author_names = [];
+                        var author_names = [];
+                        var final_names;
                         // Reconstruct the proper name from fic/author data
                         $.each(nomination_info.authors, function(value) {
                             author_names.push(authors[nomination_info.authors[value]].username);
@@ -281,7 +304,7 @@ Please correct the errors below.
                             final_names = author_names[0] + ' and ' + author_names[1];
                         }
                         else {
-                            last_two = author_names.slice(Math.max(author_names.length - 2, 1))
+                            var last_two = author_names.slice(Math.max(author_names.length - 2, 1))
                             final_names = author_names.slice(0, author_names.length - 2).join(', ') + ', ' + last_two[0] + ' and ' + last_two[1];
                         }
 
@@ -474,14 +497,13 @@ Please correct the errors below.
     });
 
     $(".field-comment textarea, .field-detail textarea, .field-link input").blur(function() {
-        data_type = ($(this).attr('id').slice($(this).attr('id').lastIndexOf('-') + 1, $(this).attr('id').length));
+        var data_type = ($(this).attr('id').slice($(this).attr('id').lastIndexOf('-') + 1, $(this).attr('id').length));
         if (localStorage && JSON) {
             localStorage_save($(this), current_nominations, '', data_type);
         }
     });
 
     $(".field-fic select, .field-nominee select").change(function () {
-
         update_progress();
 
         if (localStorage && JSON) {
