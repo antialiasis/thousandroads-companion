@@ -22,6 +22,24 @@ class SerebiiUserAdmin(UserAdmin):
             verify_current(obj.member)
         super(SerebiiUserAdmin, self).save_model(request, obj, form, change)
 
+
+class MemberAdmin(admin.ModelAdmin):
+    def save_form(self, request, form, change):
+        if change and 'user_id' in form.changed_data:
+            self.old_member_id = request.resolver_match.args[0]
+        return super(MemberAdmin, self).save_form(request, form, change)
+
+    def save_model(self, request, obj, form, change):
+        super(MemberAdmin, self).save_model(request, obj, form, change)
+        print obj.user_id, form.instance.user_id, self.old_member_id
+        if change and 'user_id' in form.changed_data:
+            old_instance = Member.objects.get(user_id=self.old_member_id)
+            old_instance.nominations.update(nominee_id=obj)
+            old_instance.nominations_by.update(member_id=obj)
+            old_instance.votes.update(member=obj)
+            old_instance.delete()
+
+
 admin.site.register(User, SerebiiUserAdmin)
-admin.site.register(Member)
+admin.site.register(Member, MemberAdmin)
 admin.site.register(Fic)

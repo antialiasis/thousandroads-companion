@@ -4,4 +4,3 @@ staticfiles
 db.sqlite3
 sppfawards/local_settings.py
 old-git
-old_data.json

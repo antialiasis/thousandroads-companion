@@ -50,7 +50,7 @@ class SerebiiPage(object):
         return unicode(self).encode('utf-8')
 
     @classmethod
-    def from_url(cls, url, force_download=False):
+    def from_url(cls, url, force_download=False, save=False):
         """
         Takes a URL to a Serebii page for this object type and returns
         a corresponding page instance.
@@ -62,7 +62,7 @@ class SerebiiPage(object):
 
         """
         params = cls.get_params_from_url(url)  # Will raise ValueError if the URL is invalid
-        return cls.from_params(force_download=force_download, url=url, **params)
+        return cls.from_params(force_download=force_download, url=url, save=save, **params)
 
     @classmethod
     def from_params(cls, save=False, force_download=False, url=None, **kwargs):
@@ -442,7 +442,6 @@ class FicPage(SerebiiPage):
 
     def is_fic(self):
         forum_link = self.get_soup().find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
-        print forum_link
         return forum_link['href'] in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics')
 
     def load_object(self, save=True):
