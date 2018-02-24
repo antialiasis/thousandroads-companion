@@ -66,6 +66,8 @@ class Command(BaseCommand):
                             # We've already added this nomination by this person - just make sure we have the comment right
                             nom.comment = nomination.get('comment', '')
                             nom.save()
+                            if nom in placeholder_nominations:
+                                placeholder_nominations.remove(nom)
                             break
                         if nom.member_id == 388 and nom in placeholder_nominations:
                             # This is a placeholder nomination
