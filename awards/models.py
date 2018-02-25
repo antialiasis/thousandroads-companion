@@ -1,5 +1,4 @@
 # -*- coding: utf8 -*-
-import bbcode
 from datetime import datetime
 from django.db import models
 from django.db.models import Q, Count, Prefetch
@@ -8,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from serebii.models import Member, Fic, User
+from serebii.utils import bbcode_to_html
 
 
 CURRENT_YEAR = settings.YEAR
@@ -519,7 +519,7 @@ class Nomination(YearlyData):
     def detail_html(self):
         if not self.detail:
             return None
-        return bbcode.render_html(self.detail)
+        return bbcode_to_html(self.detail)
 
 
 class Vote(YearlyData):

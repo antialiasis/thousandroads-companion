@@ -1,14 +1,14 @@
-import bbcode
 from django import template
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.utils.safestring import mark_safe
+from serebii.utils import bbcode_to_html
 
 register = template.Library()
 
 @register.filter
 def parse_bbcode(text):
-    return mark_safe(bbcode.render_html(text))
+    return mark_safe(bbcode_to_html(text))
 
 @register.simple_tag
 def optional_year_url(route_name, *args, **kwargs):

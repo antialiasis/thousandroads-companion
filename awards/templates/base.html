@@ -186,6 +186,12 @@ blockquote.detail {
     margin-bottom:0;
 }
 
+.spoiler {
+    color:#000;
+    background:#000;
+    cursor:pointer;
+}
+
 @media(min-width:767px) {
     .nomination-list {
         max-width:60%;
@@ -299,6 +305,10 @@ blockquote.detail {
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 <script>
+    $(".spoiler").click(function() {
+        $(this).toggleClass("spoiler");
+    });
+
     $("blockquote.detail").each(function() {
         $(this).hide().parent().prepend('<a href="#" class="expand-detail">(Show details)</a>, ');
     });
