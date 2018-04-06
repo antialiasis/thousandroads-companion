@@ -331,7 +331,7 @@ class Fic(SerebiiObject, models.Model):
         return u'<a href="%s" target="_blank">%s</a> by %s' % (self.link(), self.title, pretty_join([author.link_html() for author in self.authors.all()]))
 
     def link_bbcode(self):
-        return u'[%(type)s=%(id)s]%(title)s[/%(type)s] by %(authors)s' % {'type': 'post' if self.post_id else 'thread', 'id': self.post_id or self.thread_id, 'title': self.title, 'authors': pretty_join([author.link_bbcode() for author in self.authors.all()])}
+        return u'[url=%(link)s]%(title)s[/url] by %(authors)s' % {'link': self.link(), 'id': self.post_id or self.thread_id, 'title': self.title, 'authors': pretty_join([author.link_bbcode() for author in self.authors.all()])}
 
     @classmethod
     def get_page_class(self):

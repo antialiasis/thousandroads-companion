@@ -485,7 +485,7 @@ class Nomination(YearlyData):
                 else:
                     return u"%s - %s" % (self.detail, self.nominee.link_bbcode())
             else:
-                return u"[spoil]%s[/spoil]%s" % (self.detail, self.fic.link_bbcode() if self.fic else self.nominee.link_bbcode())
+                return u"[spoiler]%s[/spoiler]%s" % (self.detail, self.fic.link_bbcode() if self.fic else self.nominee.link_bbcode())
         else:
             if self.fic:
                 return self.fic.link_bbcode()
