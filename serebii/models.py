@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
-from datetime import datetime, timedelta
-from dateutil import parser, tz
+from dateutil import parser
+from pytz import timezone, utc
 from django.db import models
 from django.db.models import Q
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import logout
 from django.contrib.auth.models import AbstractUser
-from django.utils import timezone
 from bs4 import BeautifulSoup
 
 
@@ -24,7 +22,7 @@ def pretty_join(items, word='and'):
 
 
 def get_soup(url):
-    request = requests.get(url, cookies={'bb_userid': str(settings.SEREBII_USER_ID), 'bb_password': settings.SEREBII_USER_PWHASH})
+    request = requests.get(url)
     return BeautifulSoup(request.text, 'html.parser')
 
 
@@ -34,8 +32,7 @@ class SerebiiPage(object):
     from this to work with fic threads/profiles.
 
     """
-    page = None
-    object_id_regex = r''
+    object_id_regexen = []
     object_class = None
 
     def __init__(self, obj, soup=None):
@@ -65,16 +62,19 @@ class SerebiiPage(object):
         return cls.from_params(force_download=force_download, url=url, save=save, **params)
 
     @classmethod
-    def from_params(cls, save=False, force_download=False, url=None, **kwargs):
+    def from_params(cls, save=False, force_download=False, url=None, object_type=None, **kwargs):
         """
         Returns a page object corresponding to the given params.
 
         """
-        if not force_download:
+        lookup_kwargs = dict(**kwargs)
+        if 'post_id' in lookup_kwargs and object_type != 'post':
+            lookup_kwargs.pop('post_id')
+        if lookup_kwargs and not force_download:
             try:
                 # See if we can get the object from the database just from the
                 # parameters
-                obj = cls.object_class.objects.get(**kwargs)
+                obj = cls.object_class.objects.get(**lookup_kwargs)
                 return cls(obj)
             except (cls.object_class.DoesNotExist, cls.object_class.MultipleObjectsReturned):
                 pass
@@ -83,7 +83,7 @@ class SerebiiPage(object):
         # refetch it for validation purposes, so fetch it from the forums
         obj = cls.object_class(**kwargs)
         page = cls(obj, get_soup(url) if url else None)
-        page.load_object(save)
+        page.load_object(save, object_type)
         return page
 
     @classmethod
@@ -92,14 +92,15 @@ class SerebiiPage(object):
         Extracts relevant parameters from a Serebii URL.
 
         """
-        url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?serebiiforums\.com\/)?%s\.php\?(%s)' % (cls.page, cls.object_id_regex), re.U)
-        match = url_regex.match(url)
-        if match is None or not match.group(1):  # The URL is invalid if the object ID match is zero-length
-            raise ValueError(u"Invalid %s URL." % cls.__name__)
+        for regex in cls.object_id_regexen:
+            url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?forums\.serebii\.net\/)?%s' % regex, re.U)
+            match = url_regex.match(url)
+            if match and match.group(1):  # The URL is invalid if the object ID match is zero-length
+                return match.groupdict()
         else:
-            return match.groupdict()
+            raise ValueError(u"Invalid %s URL." % cls.__name__)
 
-    def load_object(self, save=True):
+    def load_object(self, save=True, object_type=None):
         """
         Fetches the page from the forums and populates self.object with it.
 
@@ -122,26 +123,6 @@ class SerebiiPage(object):
         if self._soup is None:
             self._soup = get_soup(self.get_url())
         return self._soup
-
-    def get_time_info(self):
-        """
-        Returns the forum's current date and timezone offset. This is
-        cached.
-
-        """
-        if not self._time_info:
-            time_text = self.get_soup().find('div', id="footer_time").get_text()
-            sentences = time_text.split('.')
-
-            tz_sentence = sentences[0]
-            offset = tz_sentence.split(' ')[-1]
-            offset = 0 if offset == 'GMT' else int(offset)
-
-            time_sentence = sentences[1]
-            time = ' '.join(time_sentence.split(' ')[-2:])
-
-            self._time_info = (parser.parse(time), offset)
-        return self._time_info
 
 
 class SerebiiObject(object):
@@ -198,7 +179,7 @@ class Member(SerebiiObject, models.Model):
         return {'type': 'nominee', 'pk': self.pk, 'name': unicode(self), 'object': {'username': self.username}}
 
     def link(self):
-        return u"http://www.serebiiforums.com/member.php?%s" % self.user_id
+        return u"https://forums.serebii.net/members/%s/" % self.user_id
 
     def link_html(self):
         return u'<a href="%s" target="_blank">%s</a>' % (self.link(), self.username) if not self.is_guest() else self.username
@@ -226,13 +207,20 @@ class Member(SerebiiObject, models.Model):
 
 
 class MemberPage(SerebiiPage):
-    page = 'member'
-    object_id_regex = r'(?:u=)?(?P<user_id>\d+)'
+    object_id_regexen = [r'members/(?:[^&.]*\.)?(?P<user_id>\d+)']
     object_class = Member
 
-    def load_object(self, save=True):
+    def get_bio(self):
         soup = self.get_soup()
-        username = soup.find('span', class_=u"member_username").text
+        try:
+            bio = soup.find('li', id='info').find(class_='primaryContent').find(class_='ugc')
+        except AttributeError:
+            raise ValidationError(u"Could not find About field on profile page. If you submitted a valid profile link, please contact Dragonfree on the forums with your username so that you can be manually verified.")
+        return unicode(bio.get_text())
+
+    def load_object(self, save=True, object_type=None):
+        soup = self.get_soup()
+        username = soup.find('h1', class_=u"username").text
         self.object.username = username
         self.object._page = self
         if save:
@@ -259,6 +247,13 @@ class User(AbstractUser):
     member = models.ForeignKey(Member, blank=True, null=True)
     verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=10, default=get_verification_code)
+
+    def validate_verification_code(self, page):
+        if self.verification_code not in page.get_bio():
+            raise ValidationError(u"Your verification code was not found in your profile's About section. Please ensure you followed the instructions correctly. If the problem persists, please contact Dragonfree on the forums to be manually verified.")
+        # Ensure each verification can be used only once
+        self.verification_code = get_verification_code()
+        self.save()
 
 
 class UnverifiedUserMiddleware(object):
@@ -327,10 +322,10 @@ class Fic(SerebiiObject, models.Model):
 
     def link(self):
         if self.post_id:
-            urlbit = u"p=%(post)s#post%(post)s" % {'post': self.post_id}
+            urlbit = u"posts/%s" % self.post_id
         else:
-            urlbit = "t=%s" % self.thread_id
-        return u"http://www.serebiiforums.com/showthread.php?%s" % urlbit
+            urlbit = u"threads/%s" % self.thread_id
+        return u"https://forums.serebii.net/%s/" % urlbit
 
     def link_html(self):
         return u'<a href="%s" target="_blank">%s</a> by %s' % (self.link(), self.title, pretty_join([author.link_html() for author in self.authors.all()]))
@@ -354,24 +349,27 @@ class Fic(SerebiiObject, models.Model):
         if self._authors:
             for author in self._authors:
                 author.save()
+            # We're only adding authors here, rather than simply overriding,
+            # because that means if an admin adds a coauthor, they won't be
+            # overwritten next time we load the fic. Kind of a hack, but it
+            # works for now.
             existing_authors = self.authors.all()
             self.authors.add(*[author for author in self._authors if author not in existing_authors])
 
 
 class FicPage(SerebiiPage):
-    page = 'showthread'
-    # This really gnarly regex matches URL queries for threads/posts including
-    # - t=<threadid>
-    # - t=<threadid>&p=<postid>
-    # - p=<postid>
-    # - <threadid>
-    # - <threadid>&p=<postid>
-    # - <threadid>-Fic-title
-    # - <threadid>-Fic-title&p=<postid>
+    # Matches URL queries for threads/posts including
+    # - threads/<threadid>/
+    # - threads/fic-title.<threadid>
+    # - threads/<threadid>/#post-<postid>
+    # - threads/<threadid>/page-2#post-<postid>
+    # - posts/<postid>/
     # ...which should cover every sensible URL a person could enter for a
-    # Serebii thread/post. It will technically also match an empty query
-    # string, but we can handle that case separately.
-    object_id_regex = r'(?:(?:t=)?(?P<thread_id>\d+)[^&]*)?(?:(?(thread_id)&)p=(?P<post_id>\d+))?'
+    # Serebii thread/post.
+    object_id_regexen = [
+        r'threads/(?:[^&.]*\.)?(?P<thread_id>\d+)(?:/page-\d+)?/?(?:#post-(?P<post_id>\d+))?',
+        r'posts/(?P<post_id>\d+)'
+    ]
     object_class = Fic
 
     _pagination = None
@@ -379,72 +377,78 @@ class FicPage(SerebiiPage):
     def get_pagination(self):
         if not self._pagination:
             soup = self.get_soup()
-            self._pagination = soup.find('div', id='pagination_top')
+            self._pagination = soup.find('div', class_="pageNavLinkGroup")
         return self._pagination
 
-    def get_last_page(self):
-        soup = self.get_soup()
-        lastimg = soup.find('img', alt='Last')
+    def get_page(self, page_link):
+        page = FicPage.from_url(u"https://forums.serebii.net/{}".format(page_link['href']), force_download=True)
+        # Override the object (but not the soup)
+        page.object = self.object
+        return page
 
-        if lastimg:
-            return FicPage.from_url(u"http://www.serebiiforums.com/{}".format(lastimg.parent['href']), force_download=True)
+    def get_last_page(self):
+        pagination = self.get_pagination()
+        page_links = [link for link in pagination.find_all('a') if "text" not in link['class']]
+        last_page_link = page_links[-1] if page_links else None
+
+        if last_page_link:
+            return self.get_page(last_page_link)
         else:
             return self
 
     def has_pages(self):
         pagination = self.get_pagination()
-        page_span = pagination.find('span', class_="selected")
-        return bool(page_span)
+        return bool(pagination.find('div', class_="PageNav"))
 
     def has_next_page(self):
         pagination = self.get_pagination()
-        nextlink = pagination.find('a', rel='next')
+        nextlink = pagination.find('a', string="Next >")
         return bool(nextlink)
 
     def has_prev_page(self):
         pagination = self.get_pagination()
-        prevlink = pagination.find('a', rel='prev')
+        prevlink = pagination.find('a', string="< Prev")
         return bool(prevlink)
 
     def get_page_number(self):
         pagination = self.get_pagination()
-        page_span = pagination.find('span', class_="selected")
-        if page_span:
-            return int(page_span.get_text(strip=True))
+        pagelink = pagination.find('a', class_="currentPage")
+        if pagelink:
+            return int(pagelink.get_text(strip=True))
         else:
             return 1
 
     def get_next_page(self):
         pagination = self.get_pagination()
-        nextlink = pagination.find('a', rel='next')
+        nextlink = pagination.find('a', string="Next >")
         if nextlink:
-            return FicPage.from_url(u"http://www.serebiiforums.com/{}".format(nextlink['href']), force_download=True)
+            return self.get_page(nextlink)
         else:
             return None
 
     def get_prev_page(self):
         pagination = self.get_pagination()
-        prevlink = pagination.find('a', rel='prev')
+        prevlink = pagination.find('a', string="< Prev")
         if prevlink:
-            return FicPage.from_url(u"http://www.serebiiforums.com/{}".format(prevlink['href']), force_download=True)
+            return self.get_page(prevlink)
         else:
             return None
 
     def get_post(self):
         if self.object.post_id:
-            return Post(self, self.get_soup().find(id="post_%s" % self.object.post_id))
+            return Post(self, self.get_soup().find(id="post-%s" % self.object.post_id))
         else:
-            return Post(self, self.get_soup().find(id="posts").li)
+            return Post(self, self.get_soup().find(id="messageList").li)
 
     def get_page_posts(self):
         soup = self.get_soup()
-        return [Post(self, post) for post in soup.find(id="posts").find_all('li', recursive=False)]
+        return [Post(self, post) for post in soup.find(id="messageList").find_all('li', recursive=False)]
 
     def is_fic(self):
-        forum_link = self.get_soup().find(id="breadcrumb").find_all('li', class_="navbit")[-2].a
-        return forum_link['href'] in (u'forumdisplay.php?32-Fan-Fiction', u'forumdisplay.php?33-Non-Pokémon-Stories', u'forumdisplay.php?110-Completed-Fics')
+        forum_link = self.get_soup().find(id="pageDescription").a
+        return forum_link['href'] in (u'forums/fan-fiction.32/', u'forums/non-pokémon-stories.33/', u'forums/completed-fics.110/')
 
-    def load_object(self, save=True):
+    def load_object(self, save=True, object_type=None):
         if self.object.thread_id is None and self.object.post_id is None:
             raise ValidationError(u"No parameters given.")
 
@@ -453,19 +457,33 @@ class FicPage(SerebiiPage):
         if not self.is_fic():
             raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic." % self.object.link())
 
-        title_link = soup.find('span', class_="threadtitle").a
+        title_heading = soup.find('div', class_="titleBar").h1
 
         if self.object.thread_id is None:
-            self.object.thread_id = FicPage.get_params_from_url(title_link['href'])['thread_id']
+            thread_link = soup.find(id="pageDescription").find_all('a')[-1]
+            self.object.thread_id = FicPage.get_params_from_url(thread_link['href'])['thread_id']
+
+        if object_type != 'post':
+            self.object.post_id = None
 
         post = self.get_post()
 
+        if self.object.post_id is not None and post.post_id != int(self.object.post_id) or self.object.post_id is None and self.get_page_number() != 1:
+            # We're on the wrong page! We don't actually want to load
+            # information from this page - it's not safe (we'll get the wrong
+            # information).
+            if save:
+                # We really want to load this object. Fetch it again altogether
+                # (from params).
+                self.object = FicPage.from_params(save=True, thread_id=self.object.thread_id, post_id=self.object.post_id, object_type=object_type).object
+            return self.object
+
         if self.object.post_id is not None:
-            # The fic starts in a particular post - use the author of the post and a placeholder title
-            title = "%s - post %s" % (title_link.get_text(strip=True), self.object.post_id)
+            # The fic starts in a particular post - use a placeholder title
+            title = u"%s - post %s" % (title_heading.get_text(strip=True), self.object.post_id)
         else:
-            # The fic is a thread - use the thread title and the author of the first post
-            title = title_link.get_text(strip=True)
+            # The fic is a thread - just use the thread title as is
+            title = title_heading.get_text(strip=True)
 
         self.object.title = title
         self.object.posted_date = post.posted_date
@@ -493,37 +511,22 @@ class Post(object):
 
     @property
     def posted_date(self):
-        forum_time, tz_offset = self.page.get_time_info()
-        postdate = self._soup.find('span', class_="date").get_text(strip=True)
-
-        tz_string = get_tz_string(tz_offset)
-
-        now = timezone.now().astimezone(tz.tzoffset(None, tz_offset * 60 * 60))
-        if forum_time.hour == 23 and now.hour == 0:
-            # The forum time is actually still on the previous day
-            forum_today = now.date() - timedelta(days=1)
-        elif forum_time.hour == 0 and now.hour == 23:
-            # The forum time is on the next day
-            forum_today = now.date() + timedelta(days=1)
+        date_elem = self._soup.find('a', class_="datePermalink").find(class_="DateTime")
+        if 'title' in date_elem.attrs:
+            postdate = date_elem['title']
         else:
-            forum_today = now.date()
+            postdate = date_elem.get_text()
 
-        if 'Yesterday' in postdate:
-            yesterday = forum_today - timedelta(days=1)
-            datebit = yesterday.strftime('%d/%m/%Y')
-            postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
-        if 'Today' in postdate:
-            datebit = forum_today.strftime('%d/%m/%Y')
-            postdate = '{} {}'.format(datebit, postdate[postdate.rfind(',') + 1:])
+        london = timezone('Europe/London')
 
-        return parser.parse('{} {}'.format(postdate, tz_string)).astimezone(timezone.utc)
+        return london.localize(parser.parse(postdate)).astimezone(utc)
 
     @property
     def author(self):
-        user_elem = self._soup.find(class_="username")
-        if user_elem.name == 'a':
+        user_elem = self._soup.find('h3', class_="userText").a
+        if 'href' in user_elem.attrs:
             # It's a registered user's linked username
-            username = user_elem.strong.get_text(strip=True)
+            username = user_elem.get_text(strip=True)
             try:
                 user_id = int(MemberPage.get_params_from_url(user_elem['href'])['user_id'])
             except ValueError:

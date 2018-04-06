@@ -78,8 +78,8 @@ def validate_thread_fic(page):
             # I don't believe this should be able to happen
             # But just in case...
             if authorposts[-1].posted_date < ELIGIBILITY_START:
-                # If the last post was made before the beginning of the awards year,
-                # the story can't possibly be eligible.
+                # If the last post was made before the beginning of the awards
+                # year, the story can't possibly be eligible.
                 return False
 
         # Nothing for it but to start working backward through the thread
@@ -92,8 +92,10 @@ def validate_thread_fic(page):
             authorposts = [post for post in curpage.get_page_posts() if post.author.user_id in author_ids]
 
             if not validate_fic_page(authorposts):
-                # If the author's first post on this page is from before the awards year,
-                # the story can't possibly be eligible.
+                # If the author's first post on this page is from before the
+                # awards year, the story can't possibly be eligible (if we go
+                # further back in the thread, we're just going to get even
+                # older posts).
                 if authorposts[0].posted_date < ELIGIBILITY_START:
                     return False
 
@@ -109,7 +111,7 @@ def check_eligible(page):
     Check if the given SerebiiPage is eligible to be nominated (this year).
 
     """
-    # Only fics to actual eligibility checks at the moment
+    # Only fics do actual eligibility checks at the moment
     if not isinstance(page.object, Fic):
         return True
 

@@ -486,7 +486,7 @@ Please correct the errors below.
     update_progress();
 
     $(".field-fic input[type=text]").blur(function() {
-        if ($(this).val().indexOf('p=') !== -1) {
+        if ($(this).val().indexOf('/posts/') !== -1 || $(this).val().indexOf('#post-') !== -1) {
             // This is a post link
             $(this).next(".loading").remove();
             $(this).after('<span class="loading text-warning">You have entered a post link. By default, the system assumes your nomination is for the thread containing the post. If you wish to nominate an independent story located in the particular post you linked to, please click the appropriate button. <button type="button" class="btn btn-default btn-sm post-link-button" value="thread">Nominate the thread</button> <button type="button" class="btn btn-default btn-sm post-link-button" value="post">Nominate the post</button></span>');

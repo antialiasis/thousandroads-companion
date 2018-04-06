@@ -30,7 +30,7 @@ class SerebiiLinkField(forms.CharField):
         try:
             value = self.page_class.from_url(value, self.force_download)
         except ValueError:
-            raise ValidationError(u"Invalid %s URL. Please ensure that you have entered the full URL including the http:// portion." % self.page_class.__name__, code='invalid')
+            raise ValidationError(u"Invalid %s URL. Please ensure that you have entered the full URL including the https:// portion." % self.page_class.__name__, code='invalid')
         return value
 
     def prepare_value(self, value):
@@ -64,15 +64,6 @@ class UserLookupForm(forms.Form):
         return self.cleaned_data
 
 
-def validate_verification_code(code, soup):
-    try:
-        bio = soup.find('dt', text=u"Biography:").find_next_sibling('dd')
-    except AttributeError:
-        raise ValidationError(u"Could not find Biography field on profile page. If you submitted a valid profile link, please contact Dragonfree on the forums with your username so that you can be manually verified.")
-    if code not in unicode(bio.get_text()):
-        raise ValidationError(u"Your verification code was not found in your profile's Biography section. Please ensure you followed the instructions correctly. If the problem persists, please contact Dragonfree on the forums to be manually verified.")
-
-
 class PasswordResetForm(forms.Form):
     """
     A password reset form that verifies a verification code on the
@@ -93,8 +84,8 @@ class PasswordResetForm(forms.Form):
             if password1 != password2:
                 raise forms.ValidationError(u"The two password fields didn't match.")
 
-        member_page = MemberPage.from_url(self.user.member.link() + '&simple=1', True)
-        validate_verification_code(self.user.verification_code, member_page.get_soup())
+        member_page = MemberPage.from_url(self.user.member.link(), True)
+        self.user.validate_verification_code(member_page)
         return self.cleaned_data
 
     def save(self, commit=True):
@@ -139,8 +130,8 @@ class VerificationForm(forms.Form):
     profile page.
 
     """
-    profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. http://www.serebiiforums.com/member.php?388-Dragonfree", force_download=True)
-    verify_current = forms.BooleanField(required=False, label=u"Verify existing nominations/votes?", help_text=mark_safe(u"This member has already submitted unverified nominations/votes. To verify them now, check this box. <strong>Do not check this box if you didn't submit these nominations/votes!</strong> You can verify them later by resubmitting them."))
+    profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. https://forums.serebii.net/members/dragonfree.388/", force_download=True)
+    verify_current = forms.BooleanField(required=False, label=u"Verify existing nominations/votes?", help_text=mark_safe(u"This member has already submitted unverified nominations/votes. To verify them now, check this box. <strong>Do not check this box unless you are certain that you submitted these nominations/votes!</strong> You can verify them later by resubmitting them."))
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
@@ -160,13 +151,12 @@ class VerificationForm(forms.Form):
 
     def clean(self):
         if self.user.member:
-            profile_page = MemberPage.from_url(self.user.member.link() + '&simple=1', True)
+            profile_page = MemberPage.from_url(self.user.member.link(), True)
         elif 'profile_url' in self.cleaned_data:
             profile_page = self.cleaned_data['profile_url']
         else:
             raise ValidationError(u"You must provide a profile URL.")
-        soup = profile_page.get_soup()
-        validate_verification_code(self.user.verification_code, soup)
+        self.user.validate_verification_code(profile_page)
         self.member = profile_page.object
         self.member.save()
         return self.cleaned_data
@@ -177,7 +167,7 @@ class TempUserProfileForm(forms.Form):
     A form that creates a temporary user account from the given profile link.
 
     """
-    profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. http://www.serebiiforums.com/member.php?388-Dragonfree", force_download=True)
+    profile_url = SerebiiLinkField(MemberPage, label=u"Profile URL", help_text=u"Please enter your full Serebii.net forums profile URL, e.g. https://forums.serebii.net/members/dragonfree.388/", force_download=True)
 
     def clean(self):
         if 'profile_url' in self.cleaned_data:
@@ -191,7 +181,7 @@ class TempUserProfileForm(forms.Form):
             user = User.objects.filter(member=self.member).order_by('verified', 'id').first()
             if user:
                 raise ValidationError(format_html(
-                    u"There is already an existing account for this member under the username <strong>{}</strong>. Please either <a href=\"{}\">log in to that account</a>, <a href=\"{}\">reset its password</a> by verifying your Serebii.net forums account, or <a href=\"{}\">register a new account</a>.",
+                    u"There is already an existing account for this member under the username <strong>{}</strong>. Please either <a href=\"{}\">log in to that account</a>, <a href=\"{}\">reset its password</a> by verifying that you control this account, or <a href=\"{}\">register a new account</a>.",
                     user.username,
                     reverse('login'),
                     reverse('reset_password', kwargs={'pk': user.pk}),
