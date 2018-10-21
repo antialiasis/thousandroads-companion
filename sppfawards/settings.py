@@ -97,9 +97,6 @@ MAX_FIC_NOMINATIONS = int(os.environ.get('MAX_FIC_NOMINATIONS', 5))
 MAX_PERSON_NOMINATIONS = int(os.environ.get('MAX_PERSON_NOMINATIONS', 6))
 MIN_DIFFERENT_NOMINATIONS = int(os.environ.get('MIN_DIFFERENT_NOMINATIONS', 4))
 
-SEREBII_USER_ID = os.environ.get('SEREBII_USER_ID', '')
-SEREBII_USER_PWHASH = os.environ.get('SEREBII_USER_PWHASH', '')
-
 
 # Database
 
