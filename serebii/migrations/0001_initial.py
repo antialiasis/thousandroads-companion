@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
                 ('post_id', models.PositiveIntegerField(null=True, blank=True)),
             ],
             options={
-                'ordering': [b'title', b'thread_id', b'post_id'],
+                'ordering': ['title', 'thread_id', 'post_id'],
             },
             bases=(serebii.models.SerebiiObject, models.Model),
         ),
@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
                 ('username', models.CharField(max_length=50)),
             ],
             options={
-                'ordering': [b'username'],
+                'ordering': ['username'],
             },
             bases=(serebii.models.SerebiiObject, models.Model),
         ),
@@ -72,12 +72,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='fic',
-            unique_together=set([(b'thread_id', b'post_id')]),
+            unique_together=set([('thread_id', 'post_id')]),
         ),
         migrations.AddField(
             model_name='user',
             name='member',
-            field=models.ForeignKey(blank=True, to='serebii.Member', null=True),
+            field=models.ForeignKey(blank=True, to='serebii.Member', null=True, on_delete=models.SET_NULL),
             preserve_default=True,
         ),
     ]

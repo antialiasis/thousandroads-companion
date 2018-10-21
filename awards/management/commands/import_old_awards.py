@@ -43,13 +43,13 @@ class Command(BaseCommand):
             })
             awards_map[id] = award
             if new:
-                print "- Created new award:", award
+                print("- Created new award:", award)
 
         for cat, year, active in year_awards:
             if active:
                 year_award, new = YearAward.objects.get_or_create(award=awards_map[cat], year=year)
                 if new:
-                    print "Created new YearAward:", year_award
+                    print("Created new YearAward:", year_award)
 
         fic_map = {}
         username_map = {}
@@ -82,7 +82,7 @@ class Command(BaseCommand):
                     # Get or create a member with the given username
                     params['nominee'], new = Member.objects.get_or_create(username=author)
                     if new:
-                        print "Created new member:", params['nominee']
+                        print("Created new member:", params['nominee'])
             if award.has_fic:
                 params['fic'] = fic_map[ficid]
             if award.has_detail:
@@ -107,7 +107,7 @@ class Command(BaseCommand):
                     nomination = None
                 if not nomination:
                     nomination = Nomination.objects.create(member=Member.objects.get(user_id=388), verified=True, detail=details or '', **params)
-                    print "Created new nomination", nomination
+                    print("Created new nomination", nomination)
                 nomination_map[id] = nomination
 
         voter_map = {}
@@ -124,7 +124,7 @@ class Command(BaseCommand):
                 else:
                     member, new = Member.objects.get_or_create(username=username)
                     if new:
-                        print "Created new member:", member
+                        print("Created new member:", member)
                 v, new = Vote.objects.get_or_create(year=year, member=member, award=awards_map[cat], defaults={'nomination': nomination_map[vote], 'verified': True})
                 if new:
-                    print "Created vote:", v
+                    print("Created vote:", v)

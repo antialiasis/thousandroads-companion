@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('display_order', models.PositiveIntegerField(blank=True)),
             ],
             options={
-                'ordering': (b'category', b'display_order', b'pk'),
+                'ordering': ('category', 'display_order', 'pk'),
             },
             bases=(models.Model,),
         ),
@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=100)),
             ],
             options={
-                'ordering': (b'id',),
+                'ordering': ('id',),
                 'verbose_name_plural': 'categories',
             },
             bases=(models.Model,),
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='award',
             name='category',
-            field=models.ForeignKey(to='awards.Category'),
+            field=models.ForeignKey(to='awards.Category', on_delete=models.PROTECT),
             preserve_default=True,
         ),
         migrations.CreateModel(
@@ -53,7 +53,7 @@ class Migration(migrations.Migration):
                 ('detail', models.TextField(help_text='The character(s), scene or quote that you want to nominate.', blank=True)),
                 ('link', models.URLField(help_text='A link to a sample (generally a post) illustrating your nomination.', null=True, blank=True)),
                 ('comment', models.TextField(help_text='Optionally, you may write a comment explaining why you feel this nomination deserves the award. Users will be able to see this on the voting form. Basic BBCode allowed.', blank=True)),
-                ('award', models.ForeignKey(to='awards.Award')),
+                ('award', models.ForeignKey(to='awards.Award', on_delete=models.CASCADE)),
             ],
             options={
                 'abstract': False,

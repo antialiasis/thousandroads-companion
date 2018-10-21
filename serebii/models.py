@@ -40,11 +40,8 @@ class SerebiiPage(object):
         self._soup = soup
         self._time_info = None
 
-    def __unicode__(self):
-        return u"Serebii page for %s" % self.object
-
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return u"Serebii page for %s" % self.object
 
     @classmethod
     def from_url(cls, url, force_download=False, save=False):
@@ -172,11 +169,11 @@ class Member(SerebiiObject, models.Model):
     class Meta:
         ordering = ['username']
 
-    def __unicode__(self):
+    def __str__(self):
         return self.username
 
     def to_dict(self):
-        return {'type': 'nominee', 'pk': self.pk, 'name': unicode(self), 'object': {'username': self.username}}
+        return {'type': 'nominee', 'pk': self.pk, 'name': str(self), 'object': {'username': self.username}}
 
     def link(self):
         return u"https://forums.serebii.net/members/%s/" % self.user_id
@@ -216,7 +213,7 @@ class MemberPage(SerebiiPage):
             bio = soup.find('li', id='info').find(class_='primaryContent').find(class_='ugc')
         except AttributeError:
             raise ValidationError(u"Could not find About field on profile page. If you submitted a valid profile link, please contact Dragonfree on the forums with your username so that you can be manually verified.")
-        return unicode(bio.get_text())
+        return str(bio.get_text())
 
     def load_object(self, save=True, object_type=None):
         soup = self.get_soup()
@@ -244,7 +241,7 @@ class User(AbstractUser):
     verified by an admin).
 
     """
-    member = models.ForeignKey(Member, blank=True, null=True)
+    member = models.ForeignKey(Member, on_delete=models.SET_NULL, blank=True, null=True)
     verified = models.BooleanField(default=False)
     verification_code = models.CharField(max_length=10, default=get_verification_code)
 
@@ -254,25 +251,6 @@ class User(AbstractUser):
         # Ensure each verification can be used only once
         self.verification_code = get_verification_code()
         self.save()
-
-
-class UnverifiedUserMiddleware(object):
-    """
-    Check if the current user is an unverified temp user and if there
-    is a verified user for the same member. If so, log the user out.
-
-    This prevents unverified users from sneaking in to override a
-    verified user's votes.
-
-    """
-    def process_request(self, request):
-        if (
-            request.user.is_authenticated() and
-            request.user.member and
-            not request.user.verified and
-            User.objects.filter(member=request.user.member, verified=True).exists()
-        ):
-            logout(request)
 
 
 class FicQuerySet(models.QuerySet):
@@ -307,7 +285,7 @@ class Fic(SerebiiObject, models.Model):
         unique_together = ['thread_id', 'post_id']
         ordering = ['title', 'thread_id', 'post_id']
 
-    def __unicode__(self):
+    def __str__(self):
         if self.pk is not None:
             authors = [author.username for author in self.authors.all()]
         else:
@@ -315,7 +293,7 @@ class Fic(SerebiiObject, models.Model):
         return u"%s by %s" % (self.title, pretty_join(authors))
 
     def to_dict(self):
-        return {'type': 'fic', 'pk': self.pk, 'name': unicode(self), 'object': {'title': self.title, 'authors': [author.pk for author in self.authors.all()]}}
+        return {'type': 'fic', 'pk': self.pk, 'name': str(self), 'object': {'title': self.title, 'authors': [author.pk for author in self.authors.all()]}}
 
     def get_authors(self):
         return list(self.authors.all()) if self.pk else self._authors
@@ -499,7 +477,7 @@ class Post(object):
         self.page = page
         self._soup = post_soup
 
-    def __unicode__(self):
+    def __str__(self):
         return u'Post #{} by {} in {} (posted {})'.format(self.post_id, self.author, self.page.object, self.posted_date)
 
     def __repr__(self):

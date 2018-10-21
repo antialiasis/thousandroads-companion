@@ -1,17 +1,45 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.views.generic.base import View
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.edit import FormView, CreateView, UpdateView
-from django.core.urlresolvers import reverse, reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth import authenticate, login
 from awards.models import verify_current, Phase, CURRENT_YEAR
 from serebii.models import User, Member, Fic
 from serebii.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm
+
+
+class UnverifiedUserMiddleware:
+    """
+    Check if the current user is an unverified temp user and if there
+    is a verified user for the same member. If so, log the user out.
+
+    This prevents unverified users from sneaking in to override a
+    verified user's votes.
+
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            if (
+                request.user.is_authenticated and
+                request.user.member and
+                not request.user.verified and
+                User.objects.filter(member=request.user.member, verified=True).exists()
+            ):
+                logout(request)
+                return redirect(reverse('login'))
+
+        return self.get_response(request)
 
 
 class JSONViewMixin(object):
@@ -23,6 +51,16 @@ class JSONViewMixin(object):
         data = json.dumps(context)
         response_kwargs['content_type'] = 'application/json'
         return HttpResponse(data, **response_kwargs)
+
+
+class LoginRequiredMixin(object):
+    """
+    A mixin to make views require login.
+
+    """
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super(LoginRequiredMixin, self).dispatch(*args, **kwargs)
 
 
 class RegisterView(CreateView):
@@ -37,7 +75,7 @@ class RegisterView(CreateView):
         return response
 
 
-class EditUserInfoView(UpdateView):
+class EditUserInfoView(LoginRequiredMixin, UpdateView):
     template_name = "edit_user_info.html"
     model = User
     form_class = UserInfoForm
@@ -48,10 +86,13 @@ class EditUserInfoView(UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, u"Your information has been successfully edited!")
-        return super(EditUserInfoView, self).form_valid(form)
+        response = super().form_valid(form)
+        # Make sure the user doesn't get logged out
+        update_session_auth_hash(self.request, self.object)
+        return response
 
 
-class VerificationView(FormView):
+class VerificationView(LoginRequiredMixin, FormView):
     template_name = "verification.html"
     form_class = VerificationForm
     success_url = reverse_lazy('home')

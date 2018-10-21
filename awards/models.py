@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 from datetime import datetime
+from functools import total_ordering
 from django.db import models
 from django.db.models import Q, Count, Prefetch
 from django.conf import settings
@@ -163,6 +164,7 @@ def verify_current(member):
         Vote.objects.from_year().filter(member=member, verified=False).update(verified=True)
 
 
+@total_ordering
 class Phase(object):
     """
     Simple helper class to keep track of phases. Mostly here for the
@@ -178,13 +180,15 @@ class Phase(object):
         else:
             raise ValueError(u"%s is not a valid phase." % phase)
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
         if not isinstance(other, Phase):
             other = Phase(other)
-        return cmp(self._phases.index(self.phase), self._phases.index(other.phase))
+        return self._phases.index(self.phase) == self._phases.index(other.phase)
 
-    def __unicode__(self):
-        return self.phase
+    def __lt__(self, other):
+        if not isinstance(other, Phase):
+            other = Phase(other)
+        return self._phases.index(self.phase) < self._phases.index(other.phase)
 
     def __str__(self):
         return self.phase
@@ -250,7 +254,7 @@ class Category(models.Model):
         verbose_name_plural = u"categories"
         ordering = ('id',)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -272,7 +276,7 @@ class Award(models.Model):
     this awards year.
 
     """
-    category = models.ForeignKey(Category)
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     has_person = models.BooleanField(default=False)
@@ -286,7 +290,7 @@ class Award(models.Model):
     class Meta:
         ordering = ('category', 'display_order', 'pk')
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def clean(self):
@@ -376,7 +380,7 @@ class YearAward(YearlyData):
     change that for some years.
 
     """
-    award = models.ForeignKey(Award)
+    award = models.ForeignKey(Award, on_delete=models.CASCADE)
 
     objects = YearAwardManager()
 
@@ -384,7 +388,7 @@ class YearAward(YearlyData):
         unique_together = ('year', 'award')
         ordering = ('-year', 'award__category', 'award__display_order')
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s - %s awards" % (self.award, self.year)
 
     def get_nominations(self, with_votes=False):
@@ -402,17 +406,17 @@ class Nomination(YearlyData):
     nominee is the person who is nominated (for non-fic awards).
 
     """
-    award = models.ForeignKey(Award, related_name='nominations')
-    member = models.ForeignKey(Member, related_name='nominations_by')
-    nominee = models.ForeignKey(Member, blank=True, null=True, related_name='nominations')
-    fic = models.ForeignKey(Fic, blank=True, null=True, related_name='nominations')
+    award = models.ForeignKey(Award, related_name='nominations', on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, related_name='nominations_by', on_delete=models.CASCADE)
+    nominee = models.ForeignKey(Member, blank=True, null=True, related_name='nominations', on_delete=models.CASCADE)
+    fic = models.ForeignKey(Fic, blank=True, null=True, related_name='nominations', on_delete=models.CASCADE)
     detail = models.TextField(blank=True, help_text=u"The character(s), scene or quote that you want to nominate.")
     link = models.URLField(blank=True, null=True, help_text=u"A link to a sample (generally a post) illustrating your nomination.")
     comment = models.TextField(blank=True, help_text=u"Optionally, you may write a comment explaining why you feel this nomination deserves the award. Users will be able to see this on the voting form. Basic BBCode allowed.")
     modified_date = models.DateTimeField(auto_now=True)
     verified = models.BooleanField(default=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return u"{award} ({year}): {nomination} ({member})".format(
             award=self.award,
             year=self.year,
@@ -473,9 +477,9 @@ class Nomination(YearlyData):
                 return u"%s - %s" % (self.detail_text(), self.nominee)
         else:
             if self.fic:
-                return unicode(self.fic)
+                return str(self.fic)
             else:
-                return unicode(self.nominee)
+                return str(self.nominee)
 
     def nomination_bbcode(self):
         if self.detail:
@@ -531,15 +535,15 @@ class Vote(YearlyData):
     but it's there so that we can enforce uniqueness on it.
 
     """
-    member = models.ForeignKey(Member, related_name='votes')
-    award = models.ForeignKey(Award, related_name='votes')
-    nomination = models.ForeignKey(Nomination, related_name='votes')
+    member = models.ForeignKey(Member, related_name='votes', on_delete=models.CASCADE)
+    award = models.ForeignKey(Award, related_name='votes', on_delete=models.CASCADE)
+    nomination = models.ForeignKey(Nomination, related_name='votes', on_delete=models.CASCADE)
     verified = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('member', 'award', 'year')
 
-    def __unicode__(self):
+    def __str__(self):
         return u"Vote for %s in %s by %s" % (self.nomination.nomination_text(), self.award, self.member)
 
     def clean(self):
@@ -578,7 +582,7 @@ class FicEligibility(YearlyData):
         unique_together = ('thread_id', 'post_id', 'year')
         verbose_name_plural = 'fic eligibilities'
 
-    def __unicode__(self):
+    def __str__(self):
         return u"Eligibility result for thread %s in %s: %s" % (self.thread_id if self.post_id is None else u"%s post %s" % (self.thread_id, self.post_id), self.year, self.is_eligible)
 
 
@@ -587,7 +591,7 @@ class PageViewManager(models.Manager):
         return self.update_or_create(user=user, page=page, defaults={})
 
     def get_last_pageview(self, user, page):
-        pageview = self.filter(user=user, page=page).first() if user.is_authenticated() else None
+        pageview = self.filter(user=user, page=page).first() if user.is_authenticated else None
         return pageview.viewed_time if pageview else timezone.now()
 
 
@@ -597,7 +601,7 @@ class PageView(models.Model):
     so that we can show a "New" badge for new nominations/votes.
 
     """
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     page = models.CharField(max_length=20)
     viewed_time = models.DateTimeField(auto_now=True)
 
@@ -606,5 +610,5 @@ class PageView(models.Model):
     class Meta:
         unique_together = ('user', 'page')
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s viewed %s at %s" % (self.user, self.page, self.viewed_time)

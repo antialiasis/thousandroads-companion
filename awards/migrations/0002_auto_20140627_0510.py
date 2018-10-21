@@ -16,19 +16,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='nomination',
             name='fic',
-            field=models.ForeignKey(blank=True, to='serebii.Fic', null=True),
+            field=models.ForeignKey(blank=True, to='serebii.Fic', null=True, on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='nomination',
             name='member',
-            field=models.ForeignKey(to='serebii.Member'),
+            field=models.ForeignKey(to='serebii.Member', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='nomination',
             name='nominee',
-            field=models.ForeignKey(blank=True, to='serebii.Member', null=True),
+            field=models.ForeignKey(blank=True, to='serebii.Member', null=True, on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.CreateModel(
@@ -36,9 +36,9 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('year', models.PositiveIntegerField(default=2013, db_index=True, validators=[django.core.validators.MinValueValidator(2008), django.core.validators.MaxValueValidator(2013)])),
-                ('award', models.ForeignKey(to='awards.Award')),
-                ('member', models.ForeignKey(to='serebii.Member')),
-                ('nomination', models.ForeignKey(to='awards.Nomination')),
+                ('award', models.ForeignKey(to='awards.Award', on_delete=models.CASCADE)),
+                ('member', models.ForeignKey(to='serebii.Member', on_delete=models.CASCADE)),
+                ('nomination', models.ForeignKey(to='awards.Nomination', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -46,23 +46,23 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='vote',
-            unique_together=set([(b'member', b'award', b'year')]),
+            unique_together=set([('member', 'award', 'year')]),
         ),
         migrations.CreateModel(
             name='YearAwards',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('year', models.PositiveIntegerField(default=2013, db_index=True, validators=[django.core.validators.MinValueValidator(2008), django.core.validators.MaxValueValidator(2013)])),
-                ('award', models.ForeignKey(to='awards.Award')),
+                ('award', models.ForeignKey(to='awards.Award', on_delete=models.CASCADE)),
             ],
             options={
-                'ordering': (b'-year', b'award__category', b'award__display_order'),
+                'ordering': ('-year', 'award__category', 'award__display_order'),
                 'verbose_name_plural': 'Year awards',
             },
             bases=(models.Model,),
         ),
         migrations.AlterUniqueTogether(
             name='yearawards',
-            unique_together=set([(b'year', b'award')]),
+            unique_together=set([('year', 'award')]),
         ),
     ]

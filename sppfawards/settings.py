@@ -30,26 +30,34 @@ INSTALLED_APPS = (
     'awards',
 )
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'serebii.models.UnverifiedUserMiddleware',
-)
+    'serebii.views.UnverifiedUserMiddleware',
+]
 
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.contrib.auth.context_processors.auth",
-    "django.core.context_processors.debug",
-    "django.core.context_processors.i18n",
-    "django.core.context_processors.media",
-    "django.core.context_processors.static",
-    "django.core.context_processors.tz",
-    "django.contrib.messages.context_processors.messages",
-    "awards.views.awards_context",
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.template.context_processors.static',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'awards.views.awards_context',
+            ],
+        },
+    },
+]
 
 ROOT_URLCONF = 'sppfawards.urls'
 
@@ -66,7 +74,7 @@ LOGIN_URL = 'login'
 
 MIN_YEAR = 2008
 
-MAX_YEAR = 2017  # This should be changed every year
+MAX_YEAR = 2018  # This should be changed every year
 
 SYSTEM_START_YEAR = 2014
 

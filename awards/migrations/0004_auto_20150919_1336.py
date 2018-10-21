@@ -19,22 +19,22 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='nomination',
             name='award',
-            field=models.ForeignKey(related_name=b'nominations', to='awards.Award'),
+            field=models.ForeignKey(related_name='nominations', to='awards.Award', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
             name='fic',
-            field=models.ForeignKey(related_name=b'nominations', blank=True, to='serebii.Fic', null=True),
+            field=models.ForeignKey(related_name='nominations', blank=True, to='serebii.Fic', null=True, on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
             name='member',
-            field=models.ForeignKey(related_name=b'nominations_by', to='serebii.Member'),
+            field=models.ForeignKey(related_name='nominations_by', to='serebii.Member', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
             name='nominee',
-            field=models.ForeignKey(related_name=b'nominations', blank=True, to='serebii.Member', null=True),
+            field=models.ForeignKey(related_name='nominations', blank=True, to='serebii.Member', null=True, on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
@@ -44,17 +44,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='vote',
             name='award',
-            field=models.ForeignKey(related_name=b'votes', to='awards.Award'),
+            field=models.ForeignKey(related_name='votes', to='awards.Award', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='vote',
             name='member',
-            field=models.ForeignKey(related_name=b'votes', to='serebii.Member'),
+            field=models.ForeignKey(related_name='votes', to='serebii.Member', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='vote',
             name='nomination',
-            field=models.ForeignKey(related_name=b'votes', to='awards.Nomination'),
+            field=models.ForeignKey(related_name='votes', to='awards.Nomination', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='vote',

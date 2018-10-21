@@ -2,9 +2,9 @@ import re
 import requests
 from django import forms
 from django.core.exceptions import ValidationError
-from django.core.urlresolvers import reverse
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
+from django.urls import reverse
 from django.utils.crypto import get_random_string
 from django.utils.html import format_html, mark_safe
 from serebii.models import Member, User, MemberPage

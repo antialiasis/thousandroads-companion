@@ -10,9 +10,9 @@ The functionality is split across two 'apps', "awards" and "serebii". Roughly, s
 
 You *should* be able to run this on your own machine by following these instructions:
 
-1. Make sure you have Python 2.7 and pip installed on your computer. I also highly recommend isolating your requirements in a [virtualenv](https://pypi.python.org/pypi/virtualenv).
+1. Make sure you have Python 3.7 and pip installed on your computer. I also highly recommend isolating your requirements in a [virtual environment](https://docs.python.org/3/library/venv.html).
 2. Clone this repository.
-3. (Optional but recommended) Navigate to the repository root folder, create a virtualenv (`virtualenv venv` will do it, if you have virtualenv installed) and activate it (`source venv/bin/activate` on POSIX systems, `venv\Scripts\activate` on Windows).
+3. (Optional but recommended) Navigate to the repository root folder, create a virtual environment (`python -m venv venv` will do it) and activate it (`source venv/bin/activate` on POSIX systems, `venv\Scripts\activate` on Windows).
 4. Run `pip install -r local-requirements.txt` in the root of the repo. This will install Django and a couple of other Python packages. (The regular `requirements.txt` is used for the production setup on Heroku and requires some extra things that you won't need to set this up locally.)
 5. Run `python manage.py migrate`. This should create all the necessary database tables.
 6. Run `python manage.py createsuperuser` to create a superuser account for the admin. (This will ask you for an e-mail address, but only because Django does that by default; the awards site does not send any e-mails. You can leave it blank.)
@@ -25,7 +25,7 @@ Some other settings you might want to set:
 - `DISCUSSION_THREAD`, `NOMINATION_THREAD`, `VOTING_THREAD` and `RESULTS_THREAD`: The URLs to the relevant forum threads, to be used whenever the site needs to link to them. These settings are blank by default, which is fine for testing, but it does mean these links will not work unless you set these settings.
 - `SECRET_KEY`: By default, the secret key used to sign cookies, etc. is "insecure_default_key". That's okay when you're developing on your own machine, but if you're going to deploy this anywhere other people can get to it, you should probably set your `SECRET_KEY` to something actually secret that you make up or generate from a true random source.
 - `NOMINATION_START`, `VOTING_START` and `VOTING_END`: Naive datetime objects representing when the nomination phase should start, when the voting phase should start, and when the voting phase should end, in the UTC timezone. This is overridden by the `PHASE` setting, which is what you should generally use for testing, unless you need to work with something specifically related to the automatic phase changes.
-- Also see [Django's settings documentation](https://docs.djangoproject.com/en/1.8/ref/settings/) if you want to, say, connect to a particular database (by default it creates a SQLite file in the root directory of the repository).
+- Also see [Django's settings documentation](https://docs.djangoproject.com/en/2.1/ref/settings/) if you want to, say, connect to a particular database (by default it creates a SQLite file in the root directory of the repository).
 
 Note that you're going to need some actual awards in the database in order for the site to do much of anything. The repository includes a `data-dump.json` file that contains data about the awards and nominations from the 2013 awards, which I used for testing when developing the site; you should be able to load this data into the database with `python manage.py loaddata data-dump.json`. In order to work directly with these nominations you're going to have to set the `YEAR` setting to 2013. If you'd like to work with other years, or want to create awards and categories yourself for testing purposes, see the instructions under "The Admin" below.
 

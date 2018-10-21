@@ -1,8 +1,7 @@
-Django==1.8.4
-bbcode==1.0.21
-beautifulsoup4==4.4.0
-django-extra-views==0.7.1
+Django==2.1.2
+bbcode==1.0.32
+beautifulsoup4==4.6.3
+django-extra-views==0.11.0
+requests==2.20.0
 django-toolbelt==0.0.1
-requests==2.7.0
-python-dateutil==2.4.2
-pytz==2018.3
+python-dateutil==2.7.3

@@ -1,23 +1,21 @@
 from datetime import datetime
 from django.conf import settings
-from django.core.urlresolvers import reverse, reverse_lazy
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.views.generic.base import TemplateView
 from django.views.generic.edit import FormView
 from django.views.generic.list import ListView
-from django.utils.decorators import method_decorator
+from django.urls import reverse, reverse_lazy
 from django.utils.safestring import mark_safe
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
 from awards.models import YearAward, Nomination, Phase, PageView, check_eligible, verify_current
 from serebii.models import Member, MemberPage, Fic
 from serebii.forms import TempUserProfileForm
-from serebii.views import SerebiiObjectLookupView
+from serebii.views import LoginRequiredMixin, SerebiiObjectLookupView
 from math import ceil
 
 
@@ -37,16 +35,6 @@ def awards_context(request):
     }
 
 
-class LoginRequiredMixin(object):
-    """
-    A mixin to make views require login.
-
-    """
-    @method_decorator(login_required)
-    def dispatch(self, *args, **kwargs):
-        return super(LoginRequiredMixin, self).dispatch(*args, **kwargs)
-
-
 class PageViewMixin(object):
     """
     A mixin causing page view times to be tracked for this view.
@@ -56,7 +44,7 @@ class PageViewMixin(object):
         # We need to first calculate the response (which calls
         # get_context_data) before we add the new pageview.
         response = super(PageViewMixin, self).get(*args, **kwargs)
-        if self.request.user.is_authenticated():
+        if self.request.user.is_authenticated:
             PageView.objects.add_pageview(self.request.user, self.page_name)
         return response
 
@@ -69,7 +57,9 @@ class PageViewMixin(object):
 class YearAwardsMassEditView(FormSetView):
     form_class = YearAwardForm
     formset_class = BaseYearAwardFormSet
-    extra = 0
+    factory_kwargs = {
+        'extra': 0
+    }
     success_url = reverse_lazy('admin:awards_yearaward_changelist')
     template_name = "admin/awards/set_yearawards.html"
     extra_context = {}
@@ -111,13 +101,13 @@ class YearAwardsMassEditView(FormSetView):
 
 class TempUserMixin(object):
     def get_context_data(self, **kwargs):
-        if not self.request.user.is_authenticated():
+        if not self.request.user.is_authenticated:
             return { 'form': kwargs.get('form', TempUserProfileForm()) }
         else:
             return super(TempUserMixin, self).get_context_data(**kwargs)
 
     def post(self, *args, **kwargs):
-        if self.request.user.is_authenticated():
+        if self.request.user.is_authenticated:
             return super(TempUserMixin, self).post(*args, **kwargs)
         else:
             form = TempUserProfileForm(data=self.request.POST)
@@ -130,7 +120,7 @@ class TempUserMixin(object):
                 return self.render_to_response(self.get_context_data(form=form))
 
     def get(self, *args, **kwargs):
-        if self.request.user.is_authenticated():
+        if self.request.user.is_authenticated:
             return super(TempUserMixin, self).get(*args, **kwargs)
         else:
             form = TempUserProfileForm()
@@ -140,7 +130,9 @@ class TempUserMixin(object):
 class NominationView(TempUserMixin, FormSetView):
     form_class = NominationForm
     formset_class = BaseNominationFormSet
-    extra = 0
+    factory_kwargs = {
+        'extra': 0
+    }
     success_url = reverse_lazy('nomination')
     template_name = "nomination.html"
     temp_user_success_message = 'After making your nominations, you <strong>must</strong> <a href="%s">verify your account</a> to confirm your identity, or your nominations will not be counted.'

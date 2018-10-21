@@ -75,6 +75,10 @@ class FicForm(forms.ModelForm):
         fields = ('title', 'authors', 'thread_id', 'post_id')
 
 
+class IsPostLinkWidget(forms.CheckboxInput):
+    template_name = 'widgets/is_post_link.html'
+
+
 class SerebiiObjectWidget(forms.MultiWidget):
     """
     A widget for entering a link to a fic/profile, used for nominating.
@@ -84,6 +88,8 @@ class SerebiiObjectWidget(forms.MultiWidget):
     field into which a link can be entered.
 
     """
+    template_name = 'widgets/serebii_object.html'
+
     def __init__(self, object_class, *args, **kwargs):
         self.object_class = object_class
         super(SerebiiObjectWidget, self).__init__(*args, **kwargs)
@@ -108,11 +114,6 @@ class SerebiiObjectWidget(forms.MultiWidget):
             decompressed.append(bool(isinstance(value, Fic) and value.post_id))
         return decompressed
 
-    def format_output(self, rendered_widgets):
-        if len(rendered_widgets) >= 3:
-            rendered_widgets[2] = '<span class="is-post-link">Is this a single-post fic? %s <span class="help-text">Check this box if the fic does not have a thread to itself, but rather lives in the specific post you linked.</span></span>' % rendered_widgets[2]
-        return '<span class="serebii-object">%s</span>' % ' '.join(rendered_widgets)
-
 
 class SerebiiObjectSelect(forms.Select):
     """
@@ -125,14 +126,28 @@ class SerebiiObjectSelect(forms.Select):
         self.object_class = object_class
         super(SerebiiObjectSelect, self).__init__(*args, **kwargs)
 
-    def render(self, name, value, attrs=None, choices=()):
-        if value and value not in (choice[0] for choice in self.choices):
-            # The defined value is not in the available choices - check if it's a valid fic/member
-            selected_object = self.object_class.objects.filter(pk=value).first()
-            if selected_object:
-                # We have a submitted value that's the PK for a fic/member - include that fic/member as a choice
-                choices = ((selected_object.pk, unicode(selected_object)),)
-        return super(SerebiiObjectSelect, self).render(name, value, attrs, choices=choices)
+    def optgroups(self, name, value, attrs=None):
+        groups = super(SerebiiObjectSelect, self).optgroups(name, value, attrs)
+
+        for val in value:
+            if val and val not in (choice[0] for choice in self.choices):
+                # The defined value is not in the available choices - check if it's a valid fic/member
+                selected_object = self.object_class.objects.filter(pk=val).first()
+                if selected_object:
+                    # We have a submitted value that's the PK for a fic/member - include that fic/member as a choice
+                    index = len(groups)
+                    groups.append((None, [
+                        self.create_option(
+                            name,
+                            selected_object.pk,
+                            str(selected_object),
+                            True,
+                            index,
+                            subindex=None,
+                            attrs=attrs
+                        )
+                    ], index))
+        return groups
 
 
 class SerebiiObjectIterator(ModelChoiceIterator):
@@ -166,13 +181,13 @@ class SerebiiObjectField(forms.MultiValueField):
         self.really_required = kwargs.pop('required', True)
         self.object_class = page_class.object_class
         # The actual field's queryset argument needs to be the entire collection of fics/members
-        object_dropdown = SerebiiObjectChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class), cache_choices=True)
+        object_dropdown = SerebiiObjectChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class))
         fields = [
             object_dropdown,
             SerebiiLinkField(page_class)
         ]
         if self.object_class == Fic:
-            fields.append(forms.BooleanField(required=False))
+            fields.append(forms.BooleanField(required=False, widget=IsPostLinkWidget()))
         super(SerebiiObjectField, self).__init__(fields, *args, required=False, **kwargs)
 
         self.widget = SerebiiObjectWidget(self.object_class, [field.widget for field in self.fields])

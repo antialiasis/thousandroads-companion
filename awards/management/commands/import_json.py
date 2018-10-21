@@ -25,23 +25,23 @@ class Command(BaseCommand):
         except (IOError, ValueError):
             raise CommandError("Invalid JSON file!")
         dry_run = options['dry_run']
-        print dry_run
+        print(dry_run)
         for year, nominations in data.items():
             if options['year'] and int(year) != options['year']:
                 continue
-            print "Nominations for year {}!".format(year)
+            print("Nominations for year {}!".format(year))
 
             placeholder_nominations = set(Nomination.objects.from_year(year).filter(member_id=388))
             for nomination in nominations:
                 try:
                     award = Award.objects.get(name=nomination['award'])
                 except Award.DoesNotExist:
-                    print "No such award as '{}'!".format(nomination['award'])
+                    print("No such award as '{}'!".format(nomination['award']))
                     continue
                 try:
                     year_award = YearAward.objects.get(award=award, year=year)
                 except YearAward.DoesNotExist:
-                    print "The award '{}' was not active in the year {}!".format(nomination['award'], year)
+                    print("The award '{}' was not active in the year {}!".format(nomination['award'], year))
                     continue
                 nomination_params = {
                     'verified': True,
@@ -55,7 +55,7 @@ class Command(BaseCommand):
                     nominee = MemberPage.from_url(nomination.get('nominee_user_link'), save=True).object
                     nomination_params['nominee'] = nominee
                 else:
-                    print "This nomination has neither a thread nor a user link!", nomination
+                    print("This nomination has neither a thread nor a user link!", nomination)
                     continue
                 existing_nominations = Nomination.objects.filter(**nomination_params)
                 existing_noms = [nom for nom in existing_nominations if not award.has_detail or compare_spaceless(nom.detail, nomination.get('detail', ''))]
@@ -87,6 +87,6 @@ class Command(BaseCommand):
                                 **nomination_params
                             )
                 else:
-                    print "No nominations exist matching these filters!", nomination_params, nomination['detail'].encode('cp437', 'ignore') if 'detail' in nomination else None, existing_nominations
+                    print("No nominations exist matching these filters!", nomination_params, nomination['detail'].encode('cp437', 'ignore') if 'detail' in nomination else None, existing_nominations)
 
-            print "Unmatched placeholders:", placeholder_nominations
+            print("Unmatched placeholders:", placeholder_nominations)
