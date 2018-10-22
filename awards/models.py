@@ -58,8 +58,9 @@ def validate_thread_fic(page):
     # We need to check whether the 'fic was UPDATED in the awards year.
     # First look at author's posts on the given page.
     # If any are from the awards year, we don't need to go further.
+    page_posts = page.get_page_posts()
     author_ids = [author.user_id for author in page.object.get_authors()]
-    authorposts = [post for post in page.get_page_posts() if post.author.user_id in author_ids]
+    authorposts = [post for post in page_posts if post.author.user_id in author_ids]
 
     if not validate_fic_page(authorposts):
         if not page.has_pages():
@@ -78,9 +79,10 @@ def validate_thread_fic(page):
             # This is the last page!
             # I don't believe this should be able to happen
             # But just in case...
-            if authorposts[-1].posted_date < ELIGIBILITY_START:
-                # If the last post was made before the beginning of the awards
-                # year, the story can't possibly be eligible.
+            if authorposts and authorposts[-1].posted_date < ELIGIBILITY_START or page_posts[-1].posted_date < ELIGIBILITY_START:
+                # If the last post by the author, or the last post in the
+                # thread altogether, was made before the beginning of the
+                # awards year, the story can't possibly be eligible.
                 return False
 
         # Nothing for it but to start working backward through the thread
@@ -90,14 +92,15 @@ def validate_thread_fic(page):
             curpage = curpage.get_prev_page()
 
         while curpage:
-            authorposts = [post for post in curpage.get_page_posts() if post.author.user_id in author_ids]
+            page_posts = curpage.get_page_posts()
+            authorposts = [post for post in page_posts if post.author.user_id in author_ids]
 
             if not validate_fic_page(authorposts):
                 # If the author's first post on this page is from before the
-                # awards year, the story can't possibly be eligible (if we go
-                # further back in the thread, we're just going to get even
-                # older posts).
-                if authorposts[0].posted_date < ELIGIBILITY_START:
+                # awards year, or the first post on the page altogether, the
+                # story can't possibly be eligible (if we go further back in
+                # the thread, we're just going to get even older posts).
+                if authorposts and authorposts[0].posted_date < ELIGIBILITY_START or page_posts[0].posted_date < ELIGIBILITY_START:
                     return False
 
                 curpage = curpage.get_prev_page()
