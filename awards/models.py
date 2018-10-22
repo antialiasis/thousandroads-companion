@@ -191,12 +191,12 @@ class Phase(object):
         return self._phases.index(self.phase) < self._phases.index(other.phase)
 
     def __str__(self):
-        return self.phase
+        return str(self.phase)
 
     def __hash__(self):
         return hash(self.phase)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.phase)
 
     @classmethod
