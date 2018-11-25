@@ -17,7 +17,7 @@
     <li><a href="http://www.serebiiforums.com/showthread.php?250533-Fan-Fiction-Awards">2007 Fanfiction Awards</a></li>
 
     {% for award_year in years %}
-        {% if not forloop.last %}
+        {% if award_year != year %}
             <li><a href="{% url 'results' award_year %}">{{award_year}} Fanfiction Awards</a></li>
         {% endif %}
     {% endfor %}

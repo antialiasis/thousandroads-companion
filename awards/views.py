@@ -315,7 +315,8 @@ class VotingStatsView(ResultsView):
 
 class PastAwardsView(ListView):
     """
-        A view that lets users view information about previous years' awards.
+    A view that lets users view information about previous years' awards.
+
     """
     context_object_name = 'years'
     template_name = 'past_awards.html'
