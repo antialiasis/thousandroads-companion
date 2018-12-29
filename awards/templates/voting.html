@@ -81,6 +81,7 @@
 
     function update_progress() {
 
+        var current_votes = {};
         var unvoted_categories = {};
         var total_votes = 0;
 
@@ -89,6 +90,7 @@
             if (typeof vote !== 'undefined') {
                 if (vote === "") {
                     unvoted_categories[$(this).attr("id")] = $(this).find("legend").text();
+
                 }
                 else {
                     current_votes[$(this).attr("id")] = vote;
