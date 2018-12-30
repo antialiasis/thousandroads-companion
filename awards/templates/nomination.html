@@ -255,14 +255,14 @@ Please correct the errors below.
                     current_nominations[saved_nomination].pk === $('#' + paired_form + '-nominee_0').val()
                 ) {
                     // This nomination is the same as the paired one, on which we have no saved information. This is most likely because we entered a nomination into the second form, which was then loaded into the first form when it came back from the server. Let's put our saved stuff into the paired form instead and pretend we're dealing with that!
-                   current_nominations[paired_form] = current_nominations[saved_nomination];
+                    current_nominations[paired_form] = current_nominations[saved_nomination];
                     saved_nomination = paired_form;
                 }
             }
             // First, redo the lookup on this nomination if possible
             if (current_nominations[saved_nomination].hasOwnProperty('url')) {
                 var $unverified_nomination;
-  
+ 
                 if (current_nominations[saved_nomination].type === 'post' || current_nominations[saved_nomination].type == 'thread') {
                     // Single-post nominations need special handling
                     $unverified_nomination = $('#' + saved_nomination + '-fic_1');
@@ -271,7 +271,7 @@ Please correct the errors below.
                 }
                 else {
                     if (current_nominations[saved_nomination].type === 'fic') {
-                       $unverified_nomination = $('#' + saved_nomination + '-fic_1');
+                        $unverified_nomination = $('#' + saved_nomination + '-fic_1');
                     }
                     else {
                         $unverified_nomination = $('#' + saved_nomination + '-nominee_1');
@@ -279,7 +279,7 @@ Please correct the errors below.
 
                     $unverified_nomination.val(current_nominations[saved_nomination].url);
                     lookup($unverified_nomination, current_nominations[saved_nomination].type);
-                }
+               }
             }
             else if (current_nominations[saved_nomination].hasOwnProperty('pk')) {
                 // The item should be in the db already, just not in the drop-down
