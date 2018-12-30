@@ -236,7 +236,8 @@ Please correct the errors below.
     var current_nominations;
 
     // Load nominations from localStorage if possible
-    if (localStorage && localStorage.getItem("current_nominations")) {
+    if (localStorage && localStorage.getItem("current_nominations") && localStorage.getItem("current_year") === String({{year}})) {
+
         current_nominations = $.parseJSON(localStorage.getItem("current_nominations"));
 
         for (var saved_nomination in current_nominations) {
@@ -350,7 +351,22 @@ Please correct the errors below.
         }
     }
     else {
-        current_nominations = {};
+
+        console.log(localStorage.getItem("current_year") === String({{year}}));
+
+        // Delete any existing nominations
+        localStorage.removeItem("current_nominations");
+
+        // Also delete any votes; any existing ones are from wrong year
+        localStorage.removeItem("current_votes");
+
+        // Initialize the nominations object
+        var current_nominations = {};
+
+        // Set the year if possible
+        if (localStorage && JSON) {
+            localStorage.setItem("current_year", {{year}});
+        }
     }
 
     function update_progress() {

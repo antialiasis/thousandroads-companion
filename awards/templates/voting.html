@@ -49,7 +49,7 @@
     $("body").append('<div id="progress-tracker" class="collapse-container"><div class="collapse-marker collapse-button"><span class="glyphicon glyphicon-chevron-up"></span> Your Votes (<span class="current-vote-field">0</span>/{{award_requirement}})</div><div class="collapse-body"><span class="glyphicon glyphicon-chevron-down collapse-button pull-right"></span> You have cast <span class="current-vote-field collapse-button">0</span> vote(s).<p class="collapse-button">You must cast <span id="required-vote-field" class="collapse-button">0</span> more to submit.</p></div></div>');
 
     // Load votes from localStorage if possible
-    if (localStorage && localStorage.getItem("current_votes")) {
+    if (localStorage && localStorage.getItem("current_votes") && localStorage.getItem("current_year") === String({{year}})) {
         var current_votes = $.parseJSON(localStorage.getItem("current_votes"));
 
         for (var set_vote in current_votes) {
@@ -64,11 +64,24 @@
         }
 
     } else {
+        // Delete any existing votes
+        localStorage.removeItem("current_votes");
+
+        // Also delete any nominations: any existing ones are from wrong year
+        localStorage.removeItem("current_nominations");
+
+        // Initialize vote object
         var current_votes = {};
+
+        // If possible, save the current year
+        if (localStorage && JSON) {
+            localStorage.setItem("current_year", {{year}});
+        }
     }
 
     function update_progress() {
 
+        var current_votes = {};
         var unvoted_categories = {};
         var total_votes = 0;
 
@@ -77,6 +90,7 @@
             if (typeof vote !== 'undefined') {
                 if (vote === "") {
                     unvoted_categories[$(this).attr("id")] = $(this).find("legend").text();
+
                 }
                 else {
                     current_votes[$(this).attr("id")] = vote;
