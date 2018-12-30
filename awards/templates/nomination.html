@@ -279,7 +279,7 @@ Please correct the errors below.
 
                     $unverified_nomination.val(current_nominations[saved_nomination].url);
                     lookup($unverified_nomination, current_nominations[saved_nomination].type);
-               }
+                }
             }
             else if (current_nominations[saved_nomination].hasOwnProperty('pk')) {
                 // The item should be in the db already, just not in the drop-down
@@ -317,7 +317,7 @@ Please correct the errors below.
                         nomination_info = authors[current_nominations[saved_nomination].pk];
                         nomination_info.name = nomination_info.username;
                     }
-               }
+                }
 
                 if (nomination_info) {
                     nomination_info.pk = current_nominations[saved_nomination].pk
