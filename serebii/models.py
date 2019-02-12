@@ -424,7 +424,7 @@ class FicPage(SerebiiPage):
 
     def is_fic(self):
         forum_link = self.get_soup().find(id="pageDescription").a
-        return forum_link['href'] in (u'forums/fan-fiction.32/', u'forums/non-pokémon-stories.33/', u'forums/completed-fics.110/')
+        return forum_link['href'] in (u'forums/fan-fiction.32/', u'forums/non-pok%C3%A9mon-stories.33/', u'forums/completed-fics.110/')
 
     def load_object(self, save=True, object_type=None):
         if self.object.thread_id is None and self.object.post_id is None:
