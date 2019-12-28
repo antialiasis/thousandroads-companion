@@ -74,7 +74,7 @@ LOGIN_URL = 'login'
 
 MIN_YEAR = 2008
 
-MAX_YEAR = 2018  # This should be changed every year
+MAX_YEAR = int(os.environ.get('MAX_YEAR'))
 
 SYSTEM_START_YEAR = 2014
 
