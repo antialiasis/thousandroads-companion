@@ -5,7 +5,7 @@ Django settings for sppfawards project.
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -74,7 +74,7 @@ LOGIN_URL = 'login'
 
 MIN_YEAR = 2008
 
-MAX_YEAR = int(os.environ.get('MAX_YEAR'))
+MAX_YEAR = int(os.environ.get('MAX_YEAR', datetime.utcnow().year - 1))
 
 SYSTEM_START_YEAR = 2014
 

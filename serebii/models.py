@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
+from datetime import datetime
 from dateutil import parser
 from pytz import timezone, utc
 from django.db import models
@@ -90,7 +91,7 @@ class SerebiiPage(object):
 
         """
         for regex in cls.object_id_regexen:
-            url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?forums\.serebii\.net\/)?%s' % regex, re.U)
+            url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?forums\.serebii\.net)?%s' % regex, re.U)
             match = url_regex.match(url)
             if match and match.group(1):  # The URL is invalid if the object ID match is zero-length
                 return match.groupdict()
@@ -204,20 +205,26 @@ class Member(SerebiiObject, models.Model):
 
 
 class MemberPage(SerebiiPage):
-    object_id_regexen = [r'members/(?:[^&.]*\.)?(?P<user_id>\d+)']
+    object_id_regexen = [r'/members/(?:[^&.]*\.)?(?P<user_id>\d+)']
     object_class = Member
+
+    @classmethod
+    def from_params(self, save=False, force_download=False, url=None, object_type=None, **kwargs):
+        if not url.endswith('/about/'):
+            url += '/about/'
+        return super(MemberPage, self).from_params(save, force_download, url, object_type, **kwargs)
 
     def get_bio(self):
         soup = self.get_soup()
         try:
-            bio = soup.find('li', id='info').find(class_='primaryContent').find(class_='ugc')
+            bio = soup.find('div', class_='p-body-pageContent').find(class_='block-row').find(class_='bbWrapper')
         except AttributeError:
             raise ValidationError(u"Could not find About field on profile page. If you submitted a valid profile link, please contact Dragonfree on the forums with your username so that you can be manually verified.")
         return str(bio.get_text())
 
     def load_object(self, save=True, object_type=None):
         soup = self.get_soup()
-        username = soup.find('h1', class_=u"username").text
+        username = soup.find('h1', class_=u"p-title-value").text
         self.object.username = username
         self.object._page = self
         if save:
@@ -345,8 +352,8 @@ class FicPage(SerebiiPage):
     # ...which should cover every sensible URL a person could enter for a
     # Serebii thread/post.
     object_id_regexen = [
-        r'threads/(?:[^&.]*\.)?(?P<thread_id>\d+)(?:/page-\d+)?/?(?:#post-(?P<post_id>\d+))?',
-        r'posts/(?P<post_id>\d+)'
+        r'/threads/(?:[^&.]*\.)?(?P<thread_id>\d+)(?:/page-\d+)?/?(?:#?post-(?P<post_id>\d+))?',
+        r'/posts/(?P<post_id>\d+)'
     ]
     object_class = Fic
 
@@ -355,19 +362,21 @@ class FicPage(SerebiiPage):
     def get_pagination(self):
         if not self._pagination:
             soup = self.get_soup()
-            self._pagination = soup.find('div', class_="pageNavLinkGroup")
+            self._pagination = soup.find('nav', class_="pageNavWrapper")
         return self._pagination
 
     def get_page(self, page_link):
-        page = FicPage.from_url(u"https://forums.serebii.net/{}".format(page_link['href']), force_download=True)
+        page = FicPage.from_url(u"https://forums.serebii.net{}".format(page_link['href']), force_download=True)
         # Override the object (but not the soup)
         page.object = self.object
         return page
 
     def get_last_page(self):
         pagination = self.get_pagination()
-        page_links = [link for link in pagination.find_all('a') if "text" not in link['class']]
-        last_page_link = page_links[-1] if page_links else None
+        if pagination is None:
+            return self
+        page_links = [link for link in pagination.ul.find_all('li') if "pageNav-page--skip" not in link['class']]
+        last_page_link = page_links[-1].a if page_links else None
 
         if last_page_link:
             return self.get_page(last_page_link)
@@ -376,20 +385,26 @@ class FicPage(SerebiiPage):
 
     def has_pages(self):
         pagination = self.get_pagination()
-        return bool(pagination.find('div', class_="PageNav"))
+        return bool(pagination)
 
     def has_next_page(self):
         pagination = self.get_pagination()
-        nextlink = pagination.find('a', string="Next >")
+        if pagination is None:
+            return False
+        nextlink = pagination.find('a', class_="pageNav-jump--next")
         return bool(nextlink)
 
     def has_prev_page(self):
         pagination = self.get_pagination()
-        prevlink = pagination.find('a', string="< Prev")
+        if pagination is None:
+            return False
+        prevlink = pagination.find('a', string="pageNav-jump--prev")
         return bool(prevlink)
 
     def get_page_number(self):
         pagination = self.get_pagination()
+        if pagination is None:
+            return 1
         pagelink = pagination.find('a', class_="currentPage")
         if pagelink:
             return int(pagelink.get_text(strip=True))
@@ -398,7 +413,9 @@ class FicPage(SerebiiPage):
 
     def get_next_page(self):
         pagination = self.get_pagination()
-        nextlink = pagination.find('a', string="Next >")
+        if pagination is None:
+            return None
+        nextlink = pagination.find('a', class_="pageNav-jump--next")
         if nextlink:
             return self.get_page(nextlink)
         else:
@@ -406,7 +423,9 @@ class FicPage(SerebiiPage):
 
     def get_prev_page(self):
         pagination = self.get_pagination()
-        prevlink = pagination.find('a', string="< Prev")
+        if pagination is None:
+            return None
+        prevlink = pagination.find('a', string="pageNav-jump--prev")
         if prevlink:
             return self.get_page(prevlink)
         else:
@@ -414,17 +433,17 @@ class FicPage(SerebiiPage):
 
     def get_post(self):
         if self.object.post_id:
-            return Post(self, self.get_soup().find(id="post-%s" % self.object.post_id))
+            return Post(self, self.get_soup().find(id="js-post-%s" % self.object.post_id))
         else:
-            return Post(self, self.get_soup().find(id="messageList").li)
+            return Post(self, self.get_soup().find(class_="block--messages").article)
 
     def get_page_posts(self):
         soup = self.get_soup()
-        return [Post(self, post) for post in soup.find(id="messageList").find_all('li', recursive=False)]
+        return [Post(self, post) for post in soup.find(class_="block--messages").find_all('article', class_="message--post")]
 
     def is_fic(self):
-        forum_link = self.get_soup().find(id="pageDescription").a
-        return forum_link['href'] in (u'forums/fan-fiction.32/', u'forums/non-pok%C3%A9mon-stories.33/', u'forums/completed-fics.110/')
+        forum_link = self.get_soup().find(class_="p-breadcrumbs").find_all('li')[-1].a
+        return forum_link['href'] in (u'/forums/fan-fiction.32/', u'/forums/non-pok%C3%A9mon-stories.33/', u'/forums/completed-fics.110/')
 
     def load_object(self, save=True, object_type=None):
         if self.object.thread_id is None and self.object.post_id is None:
@@ -435,10 +454,10 @@ class FicPage(SerebiiPage):
         if not self.is_fic():
             raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic." % self.object.link())
 
-        title_heading = soup.find('div', class_="titleBar").h1
+        title_heading = soup.find('h1', class_="p-title-value")
 
         if self.object.thread_id is None:
-            thread_link = soup.find(id="pageDescription").find_all('a')[-1]
+            thread_link = soup.find(class_="message-attribution-main").a
             self.object.thread_id = FicPage.get_params_from_url(thread_link['href'])['thread_id']
 
         if object_type != 'post':
@@ -485,33 +504,27 @@ class Post(object):
 
     @property
     def post_id(self):
-        return int(self._soup['id'][5:])
+        return int(self._soup['id'][8:])
 
     @property
     def posted_date(self):
-        date_elem = self._soup.find('a', class_="datePermalink").find(class_="DateTime")
-        if 'title' in date_elem.attrs:
-            postdate = date_elem['title']
-        else:
-            postdate = date_elem.get_text()
+        date_elem = self._soup.find(class_="message-attribution-main").time
 
-        london = timezone('Europe/London')
-
-        return london.localize(parser.parse(postdate)).astimezone(utc)
+        return datetime.fromtimestamp(int(date_elem['data-time']), utc)
 
     @property
     def author(self):
-        user_elem = self._soup.find('h3', class_="userText").a
-        if 'href' in user_elem.attrs:
+        user_elem = self._soup.find('h4', class_="message-name")
+        if user_elem.a:
             # It's a registered user's linked username
-            username = user_elem.get_text(strip=True)
+            username = user_elem.a.get_text(strip=True)
             try:
-                user_id = int(MemberPage.get_params_from_url(user_elem['href'])['user_id'])
+                user_id = int(MemberPage.get_params_from_url(user_elem.a['href'])['user_id'])
             except ValueError:
                 # It's a deleted post and we can't get a proper URL - let's make it a guest.
                 user_id = None
         else:
             # It's (presumably) a guest
-            username = user_elem.get_text(strip=True)
+            username = user_elem.span.get_text(strip=True)
             user_id = None
         return Member(user_id=user_id, username=username)
