@@ -138,7 +138,11 @@ def check_eligible(page):
             eligible = True
         else:
             # Do the full eligibility check
-            eligible = validate_post_fic(page) if fic.post_id else validate_thread_fic(page)
+            try:
+                eligible = validate_post_fic(page) if fic.post_id else validate_thread_fic(page)
+            except ValueError as e:
+                # Invalid link, probably!
+                raise ValidationError(str(e))
 
         # Save the info we just fetched in the eligibility cache, but
         # only if we're past the awards year (otherwise the fic could

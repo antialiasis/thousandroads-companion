@@ -6,7 +6,7 @@
 {% block content %}
 <h1>{{object.link_html|safe}}</h1>
 
-<p class="genres">Genres: {% for genre in object.genres.all %}{{genre.name}}{% if not forloop.last %} - {% endif %}{% endfor %}</p>
+<p class="genres">Genres: {% if object.genres.all %}{% for genre in object.genres.all %}{{genre.name}}{% if not forloop.last %} - {% endif %}{% endfor %}{% else %}none{% endif %}</p>
 
 {% if object.summary %}
 <p>{{object.summary}}</p>
@@ -14,7 +14,7 @@
 <p>No summary has been added for this fic.</p>
 {% endif %}
 
-{% if user.member in object.authors.all %}
+{% if user.member in object.authors.all or user.is_staff %}
 <h2>Edit fic information</h2>
 
 <form action="" method="post">

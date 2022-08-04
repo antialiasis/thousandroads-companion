@@ -288,7 +288,7 @@ Please correct the errors below.
                 // First, create the object we need to use the add_to_selects function
                 var nomination_info = null;
                 if (current_nominations[saved_nomination].type === 'fic') {
-                    if (current_nominations[saved_nomination].pk) {
+                    if (current_nominations[saved_nomination].pk && fics[current_nominations[saved_nomination].pk]) {
                         nomination_info = fics[current_nominations[saved_nomination].pk];
 
                         var author_names = [];

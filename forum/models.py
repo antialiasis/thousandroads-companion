@@ -92,12 +92,12 @@ class ForumPage(object):
 
         """
         for regex in cls.object_id_regexen:
-            url_regex = re.compile(r'^(?:https?:\/\/(?:www\.)?%s)?%s' % (re.escape(settings.FORUM_URL), regex), re.U)
+            url_regex = re.compile(r'^(?:https?://(?:www\.)?%s|/(?:index\.php\?)?)?%s' % (re.escape(settings.FORUM_URL), regex), re.U)
             match = url_regex.match(url)
             if match and match.group(1):  # The URL is invalid if the object ID match is zero-length
                 return match.groupdict()
         else:
-            raise ValueError(u"Invalid %s URL." % cls.__name__)
+            raise ValueError(u"Invalid %s URL (%s)." % (cls.__name__, url))
 
     def load_object(self, save=True, object_type=None):
         """
@@ -365,14 +365,15 @@ class Fic(ForumObject, models.Model):
 class FicPage(ForumPage):
     # Matches URL queries for threads/posts including
     # - threads/<threadid>/
-    # - threads/fic-title.<threadid>
+    # - threads/<threadid>/unread
+    # - threads/fic-title.<threadid>/
     # - threads/<threadid>/#post-<postid>
     # - threads/<threadid>/page-2#post-<postid>
     # - posts/<postid>/
     # ...which should cover every sensible URL a person could enter for a
     # XenForo thread/post.
     object_id_regexen = [
-        r'threads/(?:[^&.]*\.)?(?P<thread_id>\d+)(?:/page-\d+)?/?(?:#?post-(?P<post_id>\d+))?',
+        r'threads/(?:[^&.]*\.)?(?P<thread_id>\d+)(?:/page-\d+|/unread)?/?(?:#?post-(?P<post_id>\d+))?',
         r'posts/(?P<post_id>\d+)'
     ]
     object_class = Fic
@@ -386,7 +387,7 @@ class FicPage(ForumPage):
         return self._pagination
 
     def get_page(self, page_link):
-        page = FicPage.from_url(u"https://{}{}".format(settings.FORUM_URL, page_link['href']), force_download=True)
+        page = FicPage.from_url(u"https://{}{}".format(settings.FORUM_URL.rsplit('/', 1)[0], page_link['href']), force_download=True)
         # Override the object (but not the soup)
         page.object = self.object
         return page
@@ -472,9 +473,9 @@ class FicPage(ForumPage):
         soup = self.get_soup()
 
         if not self.is_fic():
-            raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the Fan Fiction, Non-Pokémon Stories or Completed Fics forums). Please enter the link to a valid fanfic." % self.object.link())
+            raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the fanfic forum). Please enter the link to a valid fanfic." % self.object.link())
 
-        title_heading = soup.find('h1', class_="p-title-value")
+        thread_title = soup.find('h1', class_="p-title-value").find(text=True, recursive=False)
 
         if self.object.thread_id is None:
             thread_link = soup.find(class_="message-attribution-main").a
@@ -497,10 +498,10 @@ class FicPage(ForumPage):
 
         if self.object.post_id is not None:
             # The fic starts in a particular post - use a placeholder title
-            title = u"%s - post %s" % (title_heading.get_text(strip=True), self.object.post_id)
+            title = u"%s - post %s" % (thread_title, self.object.post_id)
         else:
             # The fic is a thread - just use the thread title as is
-            title = title_heading.get_text(strip=True)
+            title = thread_title
 
         self.object.title = title
         self.object.posted_date = post.posted_date

@@ -54,6 +54,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'forum.context_processors.forum_identity',
+                'forum.context_processors.enabled_apps',
                 'awards.views.awards_context',
             ],
         },
@@ -74,6 +75,8 @@ FORUM_NAME = os.environ.get('FORUM_NAME')
 FORUM_URL = os.environ.get('FORUM_URL')
 fic_forums = os.environ.get('VALID_FIC_FORUMS')
 VALID_FIC_FORUMS = fic_forums.split(', ') if fic_forums else ()
+
+ENABLED_APPS = ['awards', 'reviewblitz']
 
 
 # Forum awards settings

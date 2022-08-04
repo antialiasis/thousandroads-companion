@@ -8,9 +8,13 @@
 
 <p>Here, you can search for stories on {{forum_name}} that have been added to the site by genre, author, completion or tags. You can also edit the details of your own stories.</p>
 
-<form action="{% url 'catalog_search' %}" method="get">
-{% include "form.html" %}
-<p><button type="submit" class="btn btn-primary">Search</button></p>
+<form action="{% url 'catalog_search' %}" method="get" class="search-form">
+<div class="input-group">
+{{form.query}}
+<div class="input-group-btn">
+<button type="submit" class="btn btn-primary">Search</button>
+</div>
+</div>
 </form>
 
 {% include "catalog_fic_table.html" %}

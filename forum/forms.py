@@ -43,7 +43,7 @@ class ForumLinkField(forms.CharField):
 
 
 class CatalogSearchForm(forms.Form):
-    query = forms.CharField()
+    query = forms.CharField(widget=forms.TextInput(attrs={'type': 'search', 'class': 'form-control'}))
 
     def get_results(self):
         if self.is_valid():
@@ -53,7 +53,7 @@ class CatalogSearchForm(forms.Form):
 
 
 class CatalogFicForm(forms.ModelForm):
-    tags = forms.CharField()
+    tags = forms.CharField(required=False)
 
     class Meta:
         model = Fic
@@ -65,7 +65,7 @@ class CatalogFicForm(forms.ModelForm):
             self.fields['tags'].initial = ', '.join([tag.tag for tag in self.instance.tags.all()])
 
     def clean_tags(self):
-        return [slugify(tag) for tag in self.cleaned_data['tags'].split(',')]
+        return [slugify(tag) for tag in self.cleaned_data['tags'].split(',') if slugify(tag)]
 
     def save(self, commit=True):
         self.instance._tags = self.cleaned_data['tags']

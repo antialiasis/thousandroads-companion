@@ -1,6 +1,6 @@
 import json
 from django.shortcuts import redirect, render
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
 from django.http import HttpResponse
 from django.views.generic.base import View
 from django.views.generic.list import ListView
@@ -111,6 +111,8 @@ class CatalogFicView(UpdateView):
     form_class = CatalogFicForm
 
     def form_valid(self, form):
+        if not self.request.user in self.object.authors.all() and not self.request.user.is_staff:
+            raise PermissionDenied
         messages.success(self.request, u"Successfully updated fic information.")
         return super().form_valid(form)
 

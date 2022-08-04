@@ -88,7 +88,7 @@ class ForumObjectWidget(forms.MultiWidget):
     field into which a link can be entered.
 
     """
-    template_name = 'widgets/serebii_object.html'
+    template_name = 'widgets/forum_object.html'
 
     def __init__(self, object_class, *args, **kwargs):
         self.object_class = object_class

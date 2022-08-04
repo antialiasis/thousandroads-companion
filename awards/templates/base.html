@@ -78,6 +78,20 @@ textarea.results-bbcode {
     height:400px;
 }
 
+.search-form {
+    float:left;
+    margin-bottom:20px;
+}
+
+.search-form input[type=search] {
+    width:200px;
+}
+
+.input-group input, .input-group button {
+    height:30px;
+    padding:2px 10px;
+}
+
 .form {
     margin-bottom:20px;
 }
@@ -270,6 +284,7 @@ blockquote.detail {
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
+                    {% if 'awards' in enabled_apps %}
                     <li{% block active_past_awards %}{% endblock %}><a href="{% url 'past_awards' %}">Past Awards</a></li>
                     {% if phase %}
                     <li{% block active_all_nominations %}{% endblock %}><a href="{% url 'all_nominations' %}">All Nominations</a></li>
@@ -285,6 +300,7 @@ blockquote.detail {
                     {% endif %}
                     {% if phase == 'finished' %}
                     <li{% block active_results %}{% endblock %}><a href="{% url 'results' %}">Results</a></li>
+                    {% endif %}
                     {% endif %}
                     {% if user.is_authenticated %}
                     <li{% block active_edit_user_info %}{% endblock %}><a href="{% url 'edit_user_info' %}">Edit user info</a></li>
