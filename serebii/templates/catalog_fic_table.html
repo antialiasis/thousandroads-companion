@@ -1,0 +1,22 @@
+<table class="table">
+<thead>
+<tr>
+<th>Title</th>
+<th>Author</th>
+<th>Summary</th>
+<th>Genres</th>
+<th>Tags</th>
+</tr>
+</thead>
+<tbody>
+{% for fic in fics %}
+<tr>
+<td><a href="{% url 'catalog_fic' pk=fic.pk %}">{{fic.title}}</a></td>
+<td>{% for author in fic.authors.all %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<a href="{% url 'catalog_author' member=author.user_id %}">{{author.username}}</a>{% endfor %}</td>
+<td>{{fic.summary}}</td>
+<td>{% for genre in fic.genres.all %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}<a href="{% url 'catalog_genre' slug=genre.slug %}">{{genre.name}}</a>{% endfor %}</td>
+<td>{% for tag in fic.tags.all %}{% if not forloop.first %}, {% endif %}<a href="{% url 'catalog_tag' tag=tag.tag %}">{{tag.tag}}</a>{% endfor %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>

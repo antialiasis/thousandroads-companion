@@ -2,7 +2,7 @@ from django.conf.urls import url
 from django.urls import reverse_lazy
 from django.views.generic.base import TemplateView
 from django.contrib.auth.views import LoginView, LogoutView
-from serebii.views import VerificationView, RegisterView, EditUserInfoView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView
+from serebii.views import VerificationView, RegisterView, EditUserInfoView, SerebiiObjectLookupView, PasswordResetLookupView, PasswordResetView, CatalogView, CatalogAuthorView, CatalogFicView, CatalogSearchView, CatalogGenreView, CatalogTagView
 from awards.views import NominationView, NominationLookupView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView, PastAwardsView
 from serebii.models import Member, Fic
 
@@ -12,6 +12,12 @@ admin.autodiscover()
 urlpatterns = [
     # Examples:
     url(r'^$', TemplateView.as_view(template_name='home.html'), name='home'),
+    url(r'^catalog/$', CatalogView.as_view(), name='catalog'),
+    url(r'^catalog/author/(?P<member>\d+)/$', CatalogAuthorView.as_view(), name='catalog_author'),
+    url(r'^catalog/fic/(?P<pk>\d+)/$', CatalogFicView.as_view(), name='catalog_fic'),
+    url(r'^catalog/search/$', CatalogSearchView.as_view(), name='catalog_search'),
+    url(r'^catalog/genre/(?P<slug>[\w-]+)/$', CatalogGenreView.as_view(), name='catalog_genre'),
+    url(r'^catalog/tag/(?P<tag>[\w-]+)/$', CatalogTagView.as_view(), name='catalog_tag'),
     url(r'^login/$', LoginView.as_view(template_name='login.html'), name='login'),
     url(r'^reset_password/$', PasswordResetLookupView.as_view(), name='reset_password'),
     url(r'^reset_password/user/(?P<pk>\d+)/$', PasswordResetView.as_view(), name='reset_password'),

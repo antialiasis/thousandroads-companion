@@ -260,6 +260,15 @@ class User(AbstractUser):
         self.save()
 
 
+class Genre(models.Model):
+    """A fic genre."""
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class FicQuerySet(models.QuerySet):
     def nominated_in_year(self, year):
         return self.filter(nominations__year=year).distinct()
@@ -283,10 +292,15 @@ class Fic(SerebiiObject, models.Model):
     thread_id = models.PositiveIntegerField()
     post_id = models.PositiveIntegerField(blank=True, null=True)
     posted_date = models.DateTimeField()
+    summary = models.TextField(blank=True)
+    genres = models.ManyToManyField(Genre, blank=True, related_name='fics')
+    completed = models.BooleanField(default=False)
+    related_fics = models.ManyToManyField('self', blank=True)
 
     objects = FicManager()
 
     _authors = []
+    _tags = []
 
     class Meta:
         unique_together = ['thread_id', 'post_id']
@@ -340,6 +354,11 @@ class Fic(SerebiiObject, models.Model):
             # works for now.
             existing_authors = self.authors.all()
             self.authors.add(*[author for author in self._authors if author not in existing_authors])
+        if self._tags:
+            FicTag.objects.filter(~Q(tag__in=self._tags), fic=self).delete()
+            for tag in self._tags:
+                if not FicTag.objects.filter(fic=self, tag=tag).exists():
+                    FicTag.objects.create(fic=self, tag=tag)
 
 
 class FicPage(SerebiiPage):
@@ -489,6 +508,16 @@ class FicPage(SerebiiPage):
         if save:
             self.object.save()
         return self.object
+
+
+class FicTag(models.Model):
+    """A tag for a fic."""
+
+    tag = models.CharField(max_length=50, db_index=True)
+    fic = models.ForeignKey(Fic, related_name='tags', on_delete=models.CASCADE)
+
+    def __unicode__(self):
+        return self.tag
 
 
 class Post(object):

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{object.name}} - Fan Fic Catalog{% endblock %}
+
+{% block active_catalog %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Genre: {{object.name}}</h1>
+
+{% include "catalog_fic_table.html" %}
+{% endblock %}

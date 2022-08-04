@@ -4,10 +4,12 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.crypto import get_random_string
 from django.utils.html import format_html, mark_safe
-from serebii.models import Member, User, MemberPage
+from django.utils.text import slugify
+from serebii.models import Member, User, MemberPage, Fic
 from awards.models import Phase
 
 
@@ -37,6 +39,37 @@ class SerebiiLinkField(forms.CharField):
         if not isinstance(value, self.page_class):
             return ''
         return value.get_url()
+
+
+class CatalogSearchForm(forms.Form):
+    query = forms.CharField()
+
+    def get_results(self):
+        if self.is_valid():
+            query = self.cleaned_data['query']
+            return Fic.objects.filter(Q(tags__tag__icontains=query) | Q(title__icontains=query) | Q(summary__icontains=query))
+        return []
+
+
+class CatalogFicForm(forms.ModelForm):
+    tags = forms.CharField()
+
+    class Meta:
+        model = Fic
+        fields = ('summary', 'genres', 'completed')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields['tags'].initial = ', '.join([tag.tag for tag in self.instance.tags.all()])
+
+    def clean_tags(self):
+        return [slugify(tag) for tag in self.cleaned_data['tags'].split(',')]
+
+    def save(self, commit=True):
+        self.instance._tags = self.cleaned_data['tags']
+        return super().save(commit)
+
 
 
 class RegisterForm(UserCreationForm):

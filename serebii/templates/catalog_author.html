@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{object.name}} - Fan Fic Catalog{% endblock %}
+
+{% block active_catalog %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Author: <a href="{{object.link}}">{{object.username}}</a></h1>
+
+{% include "catalog_fic_table.html" %}
+{% endblock %}

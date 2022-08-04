@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{object.title}} - Fan Fic Catalog{% endblock %}
+
+{% block active_catalog %} class="active"{% endblock %}
+
+{% block content %}
+<h1>{{object.link_html|safe}}</h1>
+
+<p class="genres">Genres: {% for genre in object.genres.all %}{{genre.name}}{% if not forloop.last %} - {% endif %}{% endfor %}</p>
+
+{% if object.summary %}
+<p>{{object.summary}}</p>
+{% else %}
+<p>No summary has been added for this fic.</p>
+{% endif %}
+
+{% if user.member in object.authors.all %}
+<h2>Edit fic information</h2>
+
+<form action="" method="post">
+{% csrf_token %}
+{% include "form.html" %}
+<p><button type="submit" class="btn btn-primary">Save</button></p>
+</form>
+{% endif %}
+{% endblock %}

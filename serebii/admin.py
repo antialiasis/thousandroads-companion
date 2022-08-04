@@ -1,7 +1,7 @@
 from django.utils.translation import ugettext_lazy as _
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from serebii.models import User, Member, Fic
+from serebii.models import User, Member, Fic, Genre
 from awards.models import verify_current
 
 
@@ -43,3 +43,4 @@ class MemberAdmin(admin.ModelAdmin):
 admin.site.register(User, SerebiiUserAdmin)
 admin.site.register(Member, MemberAdmin)
 admin.site.register(Fic)
+admin.site.register(Genre)

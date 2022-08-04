@@ -3,8 +3,9 @@ from django.shortcuts import redirect, render
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.views.generic.base import View
-from django.views.generic.detail import SingleObjectMixin
-from django.views.generic.edit import FormView, CreateView, UpdateView
+from django.views.generic.list import ListView
+from django.views.generic.detail import SingleObjectMixin, DetailView
+from django.views.generic.edit import FormMixin, FormView, CreateView, UpdateView
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.contrib import messages
@@ -12,8 +13,8 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from awards.models import verify_current, Phase, CURRENT_YEAR
-from serebii.models import User, Member, Fic
-from serebii.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm
+from serebii.models import User, Member, Fic, Genre
+from serebii.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm, CatalogSearchForm, CatalogFicForm
 
 
 class UnverifiedUserMiddleware:
@@ -61,6 +62,75 @@ class LoginRequiredMixin(object):
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
         return super(LoginRequiredMixin, self).dispatch(*args, **kwargs)
+
+
+class CatalogView(ListView):
+    template_name = "catalog.html"
+    context_object_name = "fics"
+
+    def get_queryset(self):
+        return Fic.objects.order_by('title')
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(form=CatalogSearchForm())
+
+
+class CatalogGenreView(DetailView):
+    template_name = "catalog_genre.html"
+    model = Genre
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(fics=self.object.fics.order_by('title'), **kwargs)
+
+
+class CatalogTagView(ListView):
+    template_name = "catalog_tag.html"
+    context_object_name = "fics"
+
+    def get_queryset(self):
+        return Fic.objects.filter(tags__tag=self.kwargs.get('tag'))
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(tag=self.kwargs.get('tag'), **kwargs)
+
+
+class CatalogAuthorView(DetailView):
+    template_name = "catalog_author.html"
+    model = Member
+
+    def get_object(self):
+        return Member.objects.get(user_id=self.kwargs.get('member'))
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(fics=self.object.fics.order_by('title'), **kwargs)
+
+
+class CatalogFicView(UpdateView):
+    template_name = "catalog_fic.html"
+    model = Fic
+    form_class = CatalogFicForm
+
+    def form_valid(self, form):
+        messages.success(self.request, u"Successfully updated fic information.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('catalog_fic', kwargs={'pk': self.object.pk})
+
+
+class CatalogSearchView(ListView):
+    template_name = "catalog_search.html"
+    context_object_name = "fics"
+
+    def get(self, request, *args, **kwargs):
+        self.form = CatalogSearchForm(request.GET)
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.form.get_results()
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(form=self.form, **kwargs)
 
 
 class RegisterView(CreateView):
