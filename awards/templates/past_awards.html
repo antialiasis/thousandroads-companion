@@ -5,17 +5,9 @@
 {% block content %}
 <h1>Past Awards</h1>
 
-<p>The Serebii.net forums have an active fanfiction forum, which has held awards annually since 2005. Broadly, the awards happen in two phases: first, members can publicly <em>nominate</em> their favorite stories in the various different categories; and then the nominations will be gathered and members can privately <em>vote</em> on the nominations for each award.</p>
-
-<p>Initially, the awards were run by volunteers who manually collected nominations and votes. In 2008, the awards were taken over by Dragonfree (a moderator of the fanfiction forum) and given a basic offsite voting form to make the voting easier to manage, and since then the awards have been run by her and/or The Great Butler. This website, which handles both nominations and voting, was originally created by Dragonfree for the 2014 awards and has been in use since, with contributions from Negrek. The awards site is open source on <a href="https://github.com/antialiasis/serebii-fanfic-awards">GitHub</a>; pull requests are appreciated!</p>
-
-<p>Below, you can view the results from previous awards. Note that while the data from 2008-2013 has been imported into the site's database, the 2005-2007 awards simply link to their respective forum threads.</p>
+<p>Right now, the Thousand Roads forums do not do yearly awards; this functionality is left over from the Serebii.net awards that were the basis for this companion app. If awards are ever held on Thousand Roads, a history of them will appear here.</p>
 
 <ul>
-    <li><a href="http://www.serebiiforums.com/showthread.php?74567-Summer-Fiction-Awards">2005 Summer Fiction Awards</a></li>
-    <li><a href="http://www.serebiiforums.com/showthread.php?102363-Interview-With-The-Authors&amp;p=3082611#post3082611">2006 Fanfiction Awards</a></li>
-    <li><a href="http://www.serebiiforums.com/showthread.php?250533-Fan-Fiction-Awards">2007 Fanfiction Awards</a></li>
-
     {% for award_year in years %}
         {% if award_year != year %}
             <li><a href="{% url 'results' award_year %}">{{award_year}} Fanfiction Awards</a></li>

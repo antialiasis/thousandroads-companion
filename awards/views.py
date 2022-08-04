@@ -13,9 +13,9 @@ from django.contrib.auth import login
 from extra_views.formsets import FormSetView
 from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
 from awards.models import YearAward, Nomination, Phase, PageView, check_eligible, verify_current
-from serebii.models import Member, MemberPage, Fic
-from serebii.forms import TempUserProfileForm
-from serebii.views import LoginRequiredMixin, SerebiiObjectLookupView
+from forum.models import Member, MemberPage, Fic
+from forum.forms import TempUserProfileForm
+from forum.views import LoginRequiredMixin, ForumObjectLookupView
 from math import ceil
 
 
@@ -221,7 +221,7 @@ class AdminNominationView(NominationView):
         return super(AdminNominationView, self).dispatch(*args, **kwargs)
 
 
-class NominationLookupView(SerebiiObjectLookupView):
+class NominationLookupView(ForumObjectLookupView):
     model = None
 
     def get_page(self):

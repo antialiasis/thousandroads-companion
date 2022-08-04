@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Overview{% endblock %}
+{% block title %}Awards{% endblock %}
 
 {% block active_overview %} class="active"{% endblock %}
 
 {% block content %}
-<h1>{{year}} Serebii.net Forums Fanfiction Awards</h1>
+<h1>{{year}} {{forum_name}} Fanfiction Awards</h1>
 
-<p>This website handles the annual Fanfiction Awards for the <a href="http://www.serebiiforums.com/forumdisplay.php?32-Fan-Fiction">Fan Fiction forum at the Serebii.net forums</a>.</p>
+<p>Right now, the Thousand Roads forums do not do yearly awards; this functionality is left over from the Serebii.net awards that were the basis for this companion app. If awards are ever held on Thousand Roads, this would be the landing page.</p>
 
 <p>{% if not phase %}The {{year}} awards haven't started yet! Discuss the awards and suggest changes <a href="{{discussion_thread}}">here</a>.{% elif phase == 'finished' %}The {{year}} awards have concluded. You can now view the <a href="{% url 'results' %}">results</a> or discuss them <a href="{{results_thread}}">on the forums</a>. Othwerise, wait for next year!{% else %}We are currently in the <strong>{{phase}}</strong> phase of the {{year}} awards. {% if phase == 'nomination' %}Check out the nominations so far <a href="{% url 'all_nominations' %}">here</a>, or head <a href="{% url 'nomination' %}">here</a> to submit or edit your own nominations.{% elif phase == 'voting' %}See the list of nominations <a href="{% url 'all_nominations' %}">here</a>, or check out <a href="{% url 'voting' %}">the voting form</a> to submit your votes.{% endif %}{% endif %}</p>
 
-<p>This site was created by <a href="http://www.serebiiforums.com/member.php?388-Dragonfree">Dragonfree</a>. Please direct any questions, comments, errors or other feedback her way.</p>
+<p>This site was created by <a href="https://forums.thousandroads.net/index.php?members/dragonfree.2/">Dragonfree</a>. Please direct any questions, comments, errors or other feedback her way.</p>
 {% endblock %}

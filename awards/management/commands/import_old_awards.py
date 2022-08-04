@@ -2,7 +2,7 @@
 import re
 from django.core.management.base import BaseCommand, CommandError
 from awards.models import Award, YearAward, Nomination, Vote
-from serebii.models import Fic, Member, FicPage, MemberPage
+from forum.models import Fic, Member, FicPage, MemberPage
 from old_data import awards, year_awards, fics, nomination_links, nominations, voters, votes
 
 

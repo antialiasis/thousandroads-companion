@@ -24,17 +24,17 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='nomination',
             name='fic',
-            field=models.ForeignKey(related_name='nominations', blank=True, to='serebii.Fic', null=True, on_delete=models.CASCADE),
+            field=models.ForeignKey(related_name='nominations', blank=True, to='forum.Fic', null=True, on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
             name='member',
-            field=models.ForeignKey(related_name='nominations_by', to='serebii.Member', on_delete=models.CASCADE),
+            field=models.ForeignKey(related_name='nominations_by', to='forum.Member', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
             name='nominee',
-            field=models.ForeignKey(related_name='nominations', blank=True, to='serebii.Member', null=True, on_delete=models.CASCADE),
+            field=models.ForeignKey(related_name='nominations', blank=True, to='forum.Member', null=True, on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='nomination',
@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='vote',
             name='member',
-            field=models.ForeignKey(related_name='votes', to='serebii.Member', on_delete=models.CASCADE),
+            field=models.ForeignKey(related_name='votes', to='forum.Member', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='vote',

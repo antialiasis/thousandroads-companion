@@ -8,7 +8,7 @@ import django.core.validators
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('serebii', '0001_initial'),
+        ('forum', '0001_initial'),
         ('awards', '0001_initial'),
     ]
 
@@ -16,19 +16,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='nomination',
             name='fic',
-            field=models.ForeignKey(blank=True, to='serebii.Fic', null=True, on_delete=models.CASCADE),
+            field=models.ForeignKey(blank=True, to='forum.Fic', null=True, on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='nomination',
             name='member',
-            field=models.ForeignKey(to='serebii.Member', on_delete=models.CASCADE),
+            field=models.ForeignKey(to='forum.Member', on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='nomination',
             name='nominee',
-            field=models.ForeignKey(blank=True, to='serebii.Member', null=True, on_delete=models.CASCADE),
+            field=models.ForeignKey(blank=True, to='forum.Member', null=True, on_delete=models.CASCADE),
             preserve_default=True,
         ),
         migrations.CreateModel(
@@ -37,7 +37,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('year', models.PositiveIntegerField(default=2013, db_index=True, validators=[django.core.validators.MinValueValidator(2008), django.core.validators.MaxValueValidator(2013)])),
                 ('award', models.ForeignKey(to='awards.Award', on_delete=models.CASCADE)),
-                ('member', models.ForeignKey(to='serebii.Member', on_delete=models.CASCADE)),
+                ('member', models.ForeignKey(to='forum.Member', on_delete=models.CASCADE)),
                 ('nomination', models.ForeignKey(to='awards.Nomination', on_delete=models.CASCADE)),
             ],
             options={

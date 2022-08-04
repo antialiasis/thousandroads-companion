@@ -3,5 +3,5 @@ venv3
 *.pyc
 staticfiles
 db.sqlite3
-sppfawards/local_settings.py
+fanficforum/local_settings.py
 old-git

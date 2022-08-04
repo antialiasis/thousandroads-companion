@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}{% endblock %} - {{year}} Serebii.net Forums Fanfiction Awards</title>
+<title>{% block title %}{% endblock %} - {{forum_name}}</title>
 <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 <!--<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">-->
 <!--[if lt IE 9]>
@@ -44,7 +44,7 @@ select {
     max-width:100%;
 }
 
-.serebii-object .help-text {
+.forum-object .help-text {
     display:inline;
 }
 
@@ -266,7 +266,7 @@ blockquote.detail {
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="{% url 'home' %}">Serebii.net Forums Fanfiction Awards</a>
+                <a class="navbar-brand" href="{% url 'home' %}">{{forum_name}}</a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">

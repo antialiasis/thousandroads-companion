@@ -7,8 +7,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
-from serebii.models import Member, Fic, User
-from serebii.utils import bbcode_to_html
+from forum.models import Member, Fic, User
+from forum.utils import bbcode_to_html
 
 
 CURRENT_YEAR = settings.YEAR
@@ -112,7 +112,7 @@ def validate_thread_fic(page):
 
 def check_eligible(page):
     """
-    Check if the given SerebiiPage is eligible to be nominated (this year).
+    Check if the given ForumPage is eligible to be nominated (this year).
 
     """
     # Only fics do actual eligibility checks at the moment

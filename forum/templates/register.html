@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block active_register %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Register</h1>
+
+<p>Your account on this companion app is separate from your {{forum_name}} forums account. It does not have to use the same username or password (though it can, and it's probably easier to remember your username if it's the same). After registering, you will verify your  forums account. You will <strong>not</strong> have to give up your forum password.</p>
+
+<form action="" method="post">
+{% csrf_token %}
+{% include "form.html" %}
+<p><button type="submit" class="btn btn-primary">Register</button></p>
+</form>
+{% endblock %}

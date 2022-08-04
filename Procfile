@@ -1,1 +1,1 @@
-web: gunicorn sppfawards.wsgi
+web: gunicorn fanficforum.wsgi

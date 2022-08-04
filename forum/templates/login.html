@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Log In{% endblock %}
+
+{% block active_login %} class="active"{% endblock %}
+
+{% block content %}
+<h1>Log In</h1>
+
+<p>Please note that you need to <a href="{% url 'register' %}">register an account</a> on the companion site in order to log in; it is <strong>not</strong> enough to have a {{forum_name}} account. Registration is quick, easy and does not require you to give up your {{forum_name}} password.</p>
+
+<form action="" method="post">
+{% csrf_token %}
+{% include "form.html" %}
+<p><button type="submit" class="btn btn-primary">Log in</button></p>
+<p><a href="{% url 'reset_password' %}">Forgot your password?</a></p>
+</form>
+{% endblock %}

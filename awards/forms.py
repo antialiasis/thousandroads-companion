@@ -7,8 +7,8 @@ from django.forms.formsets import BaseFormSet
 from django.forms.models import ModelChoiceIterator
 from django.utils.html import mark_safe
 from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR, check_eligible
-from serebii.models import Member, MemberPage, Fic, FicPage
-from serebii.forms import SerebiiLinkField
+from forum.models import Member, MemberPage, Fic, FicPage
+from forum.forms import ForumLinkField
 
 
 class YearAwardForm(forms.Form):
@@ -79,10 +79,10 @@ class IsPostLinkWidget(forms.CheckboxInput):
     template_name = 'widgets/is_post_link.html'
 
 
-class SerebiiObjectWidget(forms.MultiWidget):
+class ForumObjectWidget(forms.MultiWidget):
     """
     A widget for entering a link to a fic/profile, used for nominating.
-    SerebiiObjectField handles giving this the correct component
+    ForumObjectField handles giving this the correct component
     widgets, which are 1) a drop-down with a list of objects of the
     appropriate type that already exist in the system, and 2) a text
     field into which a link can be entered.
@@ -92,7 +92,7 @@ class SerebiiObjectWidget(forms.MultiWidget):
 
     def __init__(self, object_class, *args, **kwargs):
         self.object_class = object_class
-        super(SerebiiObjectWidget, self).__init__(*args, **kwargs)
+        super(ForumObjectWidget, self).__init__(*args, **kwargs)
 
     def decompress(self, value):
         if value:
@@ -115,7 +115,7 @@ class SerebiiObjectWidget(forms.MultiWidget):
         return decompressed
 
 
-class SerebiiObjectSelect(forms.Select):
+class ForumObjectSelect(forms.Select):
     """
     A customized Select that restricts the actual choices given to
     those already nominated this year and the given value (if it
@@ -124,10 +124,10 @@ class SerebiiObjectSelect(forms.Select):
     """
     def __init__(self, object_class, *args, **kwargs):
         self.object_class = object_class
-        super(SerebiiObjectSelect, self).__init__(*args, **kwargs)
+        super(ForumObjectSelect, self).__init__(*args, **kwargs)
 
     def optgroups(self, name, value, attrs=None):
-        groups = super(SerebiiObjectSelect, self).optgroups(name, value, attrs)
+        groups = super(ForumObjectSelect, self).optgroups(name, value, attrs)
 
         for val in value:
             if val and val not in (choice[0] for choice in self.choices):
@@ -150,27 +150,27 @@ class SerebiiObjectSelect(forms.Select):
         return groups
 
 
-class SerebiiObjectIterator(ModelChoiceIterator):
+class ForumObjectIterator(ModelChoiceIterator):
     """
     A version of ModelChoiceIterator that limits the displayed choices
     to those objects that have been nominated in the current year.
 
     """
     def __init__(self, field):
-        super(SerebiiObjectIterator, self).__init__(field)
+        super(ForumObjectIterator, self).__init__(field)
         self.queryset = self.queryset.nominated_in_year(CURRENT_YEAR)
 
 
-class SerebiiObjectChoiceField(forms.ModelChoiceField):
+class ForumObjectChoiceField(forms.ModelChoiceField):
     def _get_choices(self):
-        return SerebiiObjectIterator(self)
+        return ForumObjectIterator(self)
 
     choices = property(_get_choices, forms.ChoiceField._set_choices)
 
 
-class SerebiiObjectField(forms.MultiValueField):
+class ForumObjectField(forms.MultiValueField):
     """
-    A field for entering a fic or member on Serebii.
+    A field for entering a fic or member on the forum.
 
     """
     empty_values = [None, '', ('', ''), ('', '', False)]
@@ -181,16 +181,16 @@ class SerebiiObjectField(forms.MultiValueField):
         self.really_required = kwargs.pop('required', True)
         self.object_class = page_class.object_class
         # The actual field's queryset argument needs to be the entire collection of fics/members
-        object_dropdown = SerebiiObjectChoiceField(queryset=self.object_class.objects.all(), widget=SerebiiObjectSelect(self.object_class))
+        object_dropdown = ForumObjectChoiceField(queryset=self.object_class.objects.all(), widget=ForumObjectSelect(self.object_class))
         fields = [
             object_dropdown,
-            SerebiiLinkField(page_class)
+            ForumLinkField(page_class)
         ]
         if self.object_class == Fic:
             fields.append(forms.BooleanField(required=False, widget=IsPostLinkWidget()))
-        super(SerebiiObjectField, self).__init__(fields, *args, required=False, **kwargs)
+        super(ForumObjectField, self).__init__(fields, *args, required=False, **kwargs)
 
-        self.widget = SerebiiObjectWidget(self.object_class, [field.widget for field in self.fields])
+        self.widget = ForumObjectWidget(self.object_class, [field.widget for field in self.fields])
 
     def validate(self, value):
         # Validate requiredness, since we bypass MultiValueField's
@@ -220,7 +220,7 @@ class SerebiiObjectField(forms.MultiValueField):
             try:
                 params = FicPage.get_params_from_url(value[1])
             except ValueError:
-                raise ValidationError(u"Invalid Fic URL. Please enter the full URL to a thread or post on the Serebii.net forums.")
+                raise ValidationError(u"Invalid Fic URL. Please enter the full URL to a thread or post on the %s forums." % settings.FORUM_NAME)
             thread_id = params.get('thread_id')
             if not thread_id:
                 # We don't actually have a thread ID
@@ -229,7 +229,7 @@ class SerebiiObjectField(forms.MultiValueField):
             value[1] = Fic(thread_id=thread_id).link()
         # Just save during clean - having more fics/members in the
         # database can only be a good thing.
-        value = super(SerebiiObjectField, self).clean(value)
+        value = super(ForumObjectField, self).clean(value)
 
         # Validate eligibility
         check_eligible(value.get_page())
@@ -244,8 +244,8 @@ class NominationForm(forms.ModelForm):
     The form for a single nomination.
 
     """
-    nominee = SerebiiObjectField(MemberPage, help_text=u"Select the user from the drop-down or paste their profile URL into the text field.")
-    fic = SerebiiObjectField(FicPage, help_text=u"Select the fic from the drop-down or paste a link to it into the text field.")
+    nominee = ForumObjectField(MemberPage, help_text=u"Select the user from the drop-down or paste their profile URL into the text field.")
+    fic = ForumObjectField(FicPage, help_text=u"Select the fic from the drop-down or paste a link to it into the text field.")
 
     class Meta:
         model = Nomination
