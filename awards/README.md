@@ -1,0 +1,21 @@
+# Awards App
+
+This app was originally developed to host the annual Serebii.net fanfiction forum awards. It is not currently in use, and recent changes to the codebase may have broken some of its functionality. If you wish to try working with this app, you need to define the following variables in your settings:
+
+  - `MAX_YEAR`: Defines the latest awards year.
+  - `PHASE`: Indicates the current phase of the awards. This can be set as `None` (when the awards have not yet started), `'nomination'` (in the nomination phase), `'voting'` (in the voting phase), or `'finished'` (when the awards are over). Changing this is how you can tinker with functionality from different phases.
+
+Some other settings you may want to set:
+- `YEAR`: Defines what the site thinks is the current awards year. This defaults to the `MAX_YEAR` setting, but if you'd like to act as if it's a previous year, this setting will let you do that.
+- `DISCUSSION_THREAD`, `NOMINATION_THREAD`, `VOTING_THREAD` and `RESULTS_THREAD`: The URLs to the relevant forum threads, to be used whenever the site needs to link to them. These settings are blank by default, which is fine for testing, but it does mean these links will not work unless you set these settings.
+- `NOMINATION_START`, `VOTING_START` and `VOTING_END`: Naive datetime objects representing when the nomination phase should start, when the voting phase should start, and when the voting phase should end, in the UTC timezone. This is overridden by the `PHASE` setting, which is what you should generally use for testing, unless you need to work with something specifically related to the automatic phase changes.
+
+# Awards-Specific Admin Controls
+
+These admin views are used by the awards app:
+
+- **Awards**: The actual awards people can be nominated for, like "Best Pokémon Chaptered Fic". On the list page, you can alter the display order of the awards; by clicking a name, you can edit its details or add one with the "Add Award" button in the top right corner.
+- **Categories**: The award categories, like "Overall Fiction Awards" and "Reviewer Awards". These literally consist of a name. You can add/edit them in a similar way as awards.
+- **Nominations**: The nominations for each award. It's easier to just add/edit these through the regular site interface, believe me. As an admin, you can edit a particular member's nominations by visiting `localhost:8000/nomination/[user-id]/`, where `[user-id]` is the forum user ID of that member. For example, if you wanted to edit Dragonfree's nominations, you could just go to `localhost:8000/nomination/2/`.
+- **Year awards**: You're actually going to need this one. This basically defines which awards are active in a given year; for instance, the 2013 awards included the "Best Original Species" award, but it was removed for the 2014 awards because of the consistent lack of nominations for it. If you loaded the 2013 data, all you need to do to work with a different year is to go to the "Year awards" page and then use the little "Mass-edit awards for year" form in the top right corner next to the "Add year award" button to get a form for the year you want. On the resulting page, you can simply uncheck any categories you don't want for that year and then press the Save button at the bottom. Note that by default, it uses the previous year as a template if it has data for the previous year; thus, if you've loaded the 2013 data and then edit the year 2014, it'll start off with the same stuff checked as for 2013 and you can modify it from there. If you go straight to 2015, on the other hand, it'll have everything checked by default.
+- **Fic eligibilities**: A cache of information on whether a given story is eligible to be nominated in a given year. These will be automatically generated for the first time someone tries to nominate a given story in a given year (assuming the awards year itself is over - otherwise, the eligibility result might still change if the story is updated within the year) and then consulted for later attempts to nominate the same story, in order to avoid having to fetch and browse through the fic thread every time. You should not need to mess with these, but you can do so to manually override the eligibility of a particular story.
