@@ -12,7 +12,7 @@ Some other settings you may want to set:
 
 # Awards-Specific Admin Controls
 
-These admin sections are used by the awards app:
+These admin views are used by the awards app:
 
 - **Awards**: The actual awards people can be nominated for, like "Best Pokémon Chaptered Fic". On the list page, you can alter the display order of the awards; by clicking a name, you can edit its details or add one with the "Add Award" button in the top right corner.
 - **Categories**: The award categories, like "Overall Fiction Awards" and "Reviewer Awards". These literally consist of a name. You can add/edit them in a similar way as awards.
