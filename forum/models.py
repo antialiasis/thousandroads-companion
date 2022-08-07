@@ -212,6 +212,10 @@ class MemberPage(ForumPage):
     @classmethod
     def from_params(self, save=False, force_download=False, url=None, object_type=None, **kwargs):
         if not url.endswith('/about/'):
+            # Trim off fragment identifier, if any
+            # Allows app to accept e.g. https://forums.example.com/index.php?members/negrek.1/#about
+            if url.rfind('#') > -1:
+                url = url[:url.rfind('#')]
             url += '/about/'
         return super(MemberPage, self).from_params(save, force_download, url, object_type, **kwargs)
 
