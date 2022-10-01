@@ -221,6 +221,10 @@ class MemberPage(ForumPage):
 
     def get_bio(self):
         soup = self.get_soup()
+        # First check whether we're able to see the page at all
+        if soup.find('div', class_=u'blockMessage--error', string=re.compile('You must be logged-in')):
+            raise ValidationError(u"Could not access profile page. Refer to the validation instructions and make your profile visible to all visitors. If you have already done so, please contact Dragonfree on the forums with your username so that you can be manually verified.")
+
         try:
             bio = soup.find('div', class_='p-body-pageContent').find(class_='block-row').find(class_='bbWrapper')
         except AttributeError:
