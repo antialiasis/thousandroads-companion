@@ -1,14 +1,16 @@
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.views.generic import ListView, DeleteView, View
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.views.generic import ListView
 from django.contrib import messages
 from reviewblitz.models import BlitzReview
 
 
 # Create your views here.
 
-class BlitzReviewApprovalQueueView(ListView):
+class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
     template_name = "blitz_review_approval_queue.html"
+    permission_required = "reviewblitz.blitzreview.approve"
 
     def get_queryset(self):
         return BlitzReview.objects.filter(approved=False)
