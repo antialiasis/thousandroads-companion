@@ -178,7 +178,7 @@ class Member(ForumObject, models.Model):
         return {'type': 'nominee', 'pk': self.pk, 'name': str(self), 'object': {'username': self.username}}
 
     def link(self):
-        return u"https://%smembers/%s/" % (settings.FORUM_NAME, self.user_id)
+        return u"https://%smembers/%s/" % (settings.FORUM_URL, self.user_id)
 
     def link_html(self):
         return u'<a href="%s" target="_blank">%s</a>' % (self.link(), self.username) if not self.is_guest() else self.username
