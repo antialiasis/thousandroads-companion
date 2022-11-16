@@ -43,6 +43,8 @@ class Review(models.Model):
 
 
 class BlitzReview(models.Model):
+    class Meta:
+        permissions = (("approve", "Can approve or reject reviews"),)
     blitz = models.ForeignKey(ReviewBlitz, related_name='blitz_reviews', on_delete=models.CASCADE)
     review = models.ForeignKey(Review, related_name='blitz_reviews', on_delete=models.CASCADE)
     theme = models.BooleanField(default=False)
