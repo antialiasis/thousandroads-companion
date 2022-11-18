@@ -567,3 +567,15 @@ class Post(object):
             username = user_elem.span.get_text(strip=True)
             user_id = None
         return Member(user_id=user_id, username=username)
+
+
+class Review(models.Model):
+    post_id = models.PositiveIntegerField(unique=True, primary_key=True)
+    author = models.ForeignKey(Member, related_name='reviews', on_delete=models.PROTECT)
+    fic = models.ForeignKey(Fic, related_name='reviews', on_delete=models.PROTECT)
+    posted_date = models.DateTimeField()
+    word_count = models.PositiveIntegerField()
+    chapters = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return "{}'s review on {}".format(self.author, self.fic.title)
