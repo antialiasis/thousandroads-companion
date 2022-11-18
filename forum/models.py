@@ -628,7 +628,7 @@ class ReviewPage(FicPage):
         self.object.word_count = post.word_count
 
         thread_params = FicPage.get_params_from_url(soup.find(class_="message-attribution-main").a["href"])
-        self.object.fic = FicPage.from_params(**thread_params, save=True).object
+        self.object.fic = FicPage.from_params(thread_id=thread_params["thread_id"], save=True).object
 
         self.object.chapters = 1
         self.object.save()
