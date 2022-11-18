@@ -552,6 +552,17 @@ class Post(object):
         return datetime.fromtimestamp(int(date_elem['data-time']), utc)
 
     @property
+    def body_text(self):
+        post_body = self._soup.find(class_="message-body")
+        for blockquote in post_body.find_all("blockquote"):
+            blockquote.decompose()
+        return post_body.get_text()
+
+    @property
+    def word_count(self):
+        return len(self.body_text.split())
+
+    @property
     def author(self):
         user_elem = self._soup.find('h4', class_="message-name")
         if user_elem.a:
@@ -614,12 +625,12 @@ class ReviewPage(FicPage):
         post = self.get_post()
         self.object.author = post.author
         self.object.posted_date = post.posted_date
+        self.object.word_count = post.word_count
 
         thread_params = FicPage.get_params_from_url(soup.find(class_="message-attribution-main").a["href"])
         self.object.fic = FicPage.from_params(**thread_params, save=True).object
 
-        self.object.word_count = 0 # TODO: actually calculate wordcount
-        self.object.chapters = 0   #       and chapters
+        self.object.chapters = 1
         self.object.save()
 
         return self.object
