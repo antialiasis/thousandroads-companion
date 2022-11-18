@@ -28,6 +28,10 @@ class ReviewBlitz(models.Model):
     def __str__(self):
         return self.title
 
+    @classmethod
+    def get_current(cls):
+        return cls.objects.latest("start_date")
+
 
 class BlitzReview(models.Model):
     class Meta:
