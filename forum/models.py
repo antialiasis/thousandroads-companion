@@ -566,10 +566,11 @@ class Post(object):
             # It's (presumably) a guest
             username = user_elem.span.get_text(strip=True)
             user_id = None
-        return Member(user_id=user_id, username=username)
+        member, created = Member.objects.get_or_create(defaults={"user_id": user_id, "username": username})
+        return member
 
 
-class Review(models.Model):
+class Review(ForumObject, models.Model):
     post_id = models.PositiveIntegerField(unique=True, primary_key=True)
     author = models.ForeignKey(Member, related_name='reviews', on_delete=models.PROTECT)
     fic = models.ForeignKey(Fic, related_name='reviews', on_delete=models.PROTECT)
@@ -577,5 +578,51 @@ class Review(models.Model):
     word_count = models.PositiveIntegerField()
     chapters = models.PositiveIntegerField(default=1)
 
+    class Meta:
+        ordering = ("author", "post_id")
+
     def __str__(self):
         return "{}'s review on {}".format(self.author, self.fic.title)
+
+    def link(self):
+        return f"https://{settings.FORUM_URL}?posts/{self.post_id}/"
+
+    def link_html(self):
+        return f'<a href="{self.link()}">{self}</a>'
+
+    def link_bbcode(self):
+        return f"[url={self.link()}]{self}[/url]"
+
+    @classmethod
+    def get_page_class(self):
+        return ReviewPage
+
+class ReviewPage(FicPage):
+    object_id_regexen = (
+        r'threads/(?:[^&.]*\.)?(?:\d+)(?:/page-\d+|/unread)?/?(?:#?post-(?P<post_id>\d+))',
+        r'posts/(?P<post_id>\d+)'
+    )
+    object_class = Review
+
+    def load_object(self, save=True, object_type=None):
+        soup = self.get_soup()
+
+        if not self.is_fic():
+            if not self.is_fic():
+                raise ValidationError( u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid review." % self.object.link())
+
+        post = self.get_post()
+        self.object.author = post.author
+        self.object.posted_date = post.posted_date
+
+        thread_params = FicPage.get_params_from_url(soup.find(class_="message-attribution-main").a["href"])
+        self.object.fic = FicPage.from_params(**thread_params, save=True).object
+
+        self.object.word_count = 0 # TODO: actually calculate wordcount
+        self.object.chapters = 0   #       and chapters
+        self.object.save()
+
+        return self.object
+
+
+
