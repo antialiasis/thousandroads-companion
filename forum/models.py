@@ -566,7 +566,7 @@ class Post(object):
             # It's (presumably) a guest
             username = user_elem.span.get_text(strip=True)
             user_id = None
-        member, created = Member.objects.get_or_create(defaults={"user_id": user_id, "username": username})
+        member, created = Member.objects.get_or_create(user_id=user_id, defaults={"username": username})
         return member
 
 
