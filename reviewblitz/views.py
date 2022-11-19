@@ -1,14 +1,15 @@
 from django.http import HttpResponseRedirect
-from django.urls import reverse, reverse_lazy
-from django.contrib.auth.mixins import PermissionRequiredMixin, LoginRequiredMixin
+from django.urls import reverse
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.generic import ListView, FormView
 from django.contrib import messages
+
+from forum.views import VerificationRequiredMixin
 from reviewblitz.models import BlitzReview, ReviewBlitz
 from reviewblitz.forms import BlitzReviewSubmissionForm
 
 
-# Create your views here.
-class BlitzReviewSubmissionFormView(LoginRequiredMixin, FormView):
+class BlitzReviewSubmissionFormView(VerificationRequiredMixin, FormView):
     form_class = BlitzReviewSubmissionForm
     template_name = "blitz_review_submit.html"
 
