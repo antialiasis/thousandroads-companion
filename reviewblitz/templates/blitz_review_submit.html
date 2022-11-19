@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load forum_utils %}
+{% block title %}Submit Blitz Review{% endblock %}
+
+{% block content %}
+<h1>Submit a Blitz Review</h1>
+    <form action="{% url 'blitz_review_submit' %}" method="post">
+        {% csrf_token %}
+        {% include "form.html" %}
+        <input type="submit" value="Submit" />
+    </form>
+{% endblock %}

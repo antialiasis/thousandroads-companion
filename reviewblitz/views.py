@@ -1,12 +1,36 @@
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.views.generic import ListView
+from django.views.generic import ListView, FormView
 from django.contrib import messages
-from reviewblitz.models import BlitzReview
+
+from forum.views import VerificationRequiredMixin
+from reviewblitz.models import BlitzReview, ReviewBlitz
+from reviewblitz.forms import BlitzReviewSubmissionForm
 
 
-# Create your views here.
+class BlitzReviewSubmissionFormView(VerificationRequiredMixin, FormView):
+    form_class = BlitzReviewSubmissionForm
+    template_name = "blitz_review_submit.html"
+
+    def form_valid(self, form):
+        review = form.cleaned_data["review"]
+        review.chapters = form.cleaned_data["chapters"]
+        review.save()
+        BlitzReview.objects.create(
+            blitz=ReviewBlitz.get_current(),
+            review=review,
+            theme=form.cleaned_data["satisfies_theme"],
+            score=0, # TODO: actually calculate score
+        )
+        messages.success(self.request, "Your review has been submitted and is pending approval.")
+        return HttpResponseRedirect(reverse("home"))
+
+    def get_form_kwargs(self):
+        kwargs = super(BlitzReviewSubmissionFormView, self).get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
 
 class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
     template_name = "blitz_review_approval_queue.html"

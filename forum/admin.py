@@ -1,7 +1,7 @@
 from django.utils.translation import ugettext_lazy as _
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from forum.models import User, Member, Fic, Genre
+from forum.models import User, Member, Fic, Genre, Review
 from awards.models import verify_current
 
 
@@ -44,3 +44,4 @@ admin.site.register(User, ForumUserAdmin)
 admin.site.register(Member, MemberAdmin)
 admin.site.register(Fic)
 admin.site.register(Genre)
+admin.site.register(Review)
