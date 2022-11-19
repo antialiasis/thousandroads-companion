@@ -619,8 +619,7 @@ class ReviewPage(FicPage):
         soup = self.get_soup()
 
         if not self.is_fic():
-            if not self.is_fic():
-                raise ValidationError( u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid review." % self.object.link())
+            raise ValidationError( u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid review." % self.object.link())
 
         post = self.get_post()
         self.object.author = post.author
