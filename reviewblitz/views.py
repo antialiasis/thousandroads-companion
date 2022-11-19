@@ -22,8 +22,14 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, FormView):
             theme=form.cleaned_data["satisfies_theme"],
             score=0, # TODO: actually calculate score
         )
-        messages.success("Your review has been submitted and is pending approval.")
+        messages.success(self.request, "Your review has been submitted and is pending approval.")
         return HttpResponseRedirect(reverse("home"))
+
+    def get_form_kwargs(self):
+        kwargs = super(BlitzReviewSubmissionFormView, self).get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
 
 class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
     template_name = "blitz_review_approval_queue.html"
