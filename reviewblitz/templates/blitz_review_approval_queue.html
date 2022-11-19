@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load forum_utils %}
+{% block title %}Blitz Review Approval Queue{% endblock %}
+
+{% block content %}
+<h1>Blitz Review Approval Queue</h1>
+    {% if blitzreview_list|length == 0 %}<p>There are currently no reviews awaiting approval. Nice one!</p>
+        <div class="tenor-gif-embed" data-postid="5217154" data-share-method="host" data-aspect-ratio="1.33333" data-width="min(500px, 100%)"><a href="https://tenor.com/view/pokemon-party-hard-gif-5217154">Pokemon Party GIF</a>from <a href="https://tenor.com/search/pokemon-gifs">Pokemon GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+    {% elif blitzreview_list|length == 1 %}<p>There is currently 1 review awaiting approval.</p>
+    {% else %}<p>There are currently {{ blitzreview_list|length }} reviews awaiting approval.</p>
+    {% endif %}
+{% include "blitz_review_approval_queue_list.html" %}
+
+<style>
+    .pending-review {
+        padding: 1em;
+        background: white;
+        filter: drop-shadow(10px 5px 5px grey);
+        border: 1px solid lightgray;
+    }
+
+    dt {
+        float: left;
+        clear: left;
+    }
+  
+    dt::after {
+        content: ":";
+        margin-right: 0.3em;
+    }
+
+    dt, dd {
+        line-height: 1.5em;
+    }
+
+    @media (min-width: 992px) {
+        dt {
+            text-align: right;
+            min-width: 11em;
+        }
+    }
+</style>
+{% endblock %}
+
+{%  block scripts %}
+<script type="text/javascript">
+    function confirmDelete(isValid) {
+        if (!isValid)
+            return confirm("Are you sure you want to reject this review? It will be deleted and the user will have to resubmit.");
+        else
+            return true;
+}
+</script>
+{% endblock %}

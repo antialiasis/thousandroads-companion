@@ -1,0 +1,32 @@
+{%  for review in blitzreview_list %}
+<div class="pending-review">
+    <h3>{{ review.review}}</h3>
+    <dl>
+        {%  autoescape off %}
+        <dt>Reviewer</dt>
+            <dd>{{ review.review.author.link_html }}</dd>
+        <dt>Fic reviewed</dt>
+            <dd>{{ review.review.fic.link_html }}</dd>
+        {% endautoescape %}
+        <dt>Chapters reviewed</dt>
+            <dd>{{ review.review.chapters }}</dd>
+        <dt>Word count</dt>
+            <dd>{{ review.review.word_count }}</dd>
+        <dt>Satisfies theme</dt>
+            <dd>{{ review.theme }}</dd>
+        <dt>Score</dt>
+            <dd>{{ review.score }}</dd>
+    </dl>
+    <form name="review_assessment_{{ review.id }}"
+          onsubmit="return confirmDelete(this.valid.checked);"
+          action="{% url 'blitz_review_approval_queue' %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="blitz_review_id" value="{{ review.id }}" />
+        <div>
+            <input type="checkbox" id="valid_{{ review.id }}" name="valid">
+            <label for="valid_{{ review.id }}">Approve review?</label>
+        </div>
+        <input type="submit"  value="Submit assessment" />
+    </form>
+</div>
+{% endfor %}

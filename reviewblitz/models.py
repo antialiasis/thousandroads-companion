@@ -1,5 +1,5 @@
 from django.db import models
-from forum.models import Fic, Member
+from forum.models import Fic, Member, Review
 
 
 class ReviewBlitzScoring(models.Model):
@@ -19,7 +19,7 @@ class ReviewBlitz(models.Model):
     title = models.CharField(max_length=255)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    reviews = models.ManyToManyField('Review', through='BlitzReview')
+    reviews = models.ManyToManyField(Review, through='BlitzReview')
     scoring = models.ForeignKey(ReviewBlitzScoring, related_name='blitzes', on_delete=models.PROTECT)
 
     class Meta:
@@ -28,21 +28,14 @@ class ReviewBlitz(models.Model):
     def __str__(self):
         return self.title
 
-
-class Review(models.Model):
-    post_id = models.PositiveIntegerField(unique=True, primary_key=True)
-    author = models.ForeignKey(Member, related_name='reviews', on_delete=models.PROTECT)
-    fic = models.ForeignKey(Fic, related_name='reviews', on_delete=models.PROTECT)
-    posted_date = models.DateTimeField()
-    word_count = models.PositiveIntegerField()
-    chapters = models.PositiveIntegerField(default=1)
-    blitzes = models.ManyToManyField(ReviewBlitz, through='BlitzReview')
-
-    def __str__(self):
-        return "{}'s review on {}".format(self.author, self.fic.title)
+    @classmethod
+    def get_current(cls):
+        return cls.objects.latest("start_date")
 
 
 class BlitzReview(models.Model):
+    class Meta:
+        permissions = (("approve", "Can approve or reject reviews"),)
     blitz = models.ForeignKey(ReviewBlitz, related_name='blitz_reviews', on_delete=models.CASCADE)
     review = models.ForeignKey(Review, related_name='blitz_reviews', on_delete=models.CASCADE)
     theme = models.BooleanField(default=False)

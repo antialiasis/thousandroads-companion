@@ -1,4 +1,7 @@
 import json
+
+from django.contrib.auth.mixins import AccessMixin
+from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect, render
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.http import HttpResponse
@@ -268,3 +271,13 @@ class ForumObjectLookupView(JSONViewMixin, View):
                 context = obj.to_dict()
                 context['other_objects'] = other_objects
         return self.render_to_json_response(context)
+
+
+class VerificationRequiredMixin(AccessMixin):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.verified:
+            messages.info(request, "You must verify your account to use this function.")
+            return redirect_to_login(self.request.get_full_path(), reverse("verification"), self.get_redirect_field_name())
+        elif not request.user.is_authenticated:
+            return self.handle_no_permission()
+        return super().dispatch(request, *args, **kwargs)

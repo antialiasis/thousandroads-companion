@@ -302,6 +302,17 @@ blockquote.detail {
                     <li{% block active_results %}{% endblock %}><a href="{% url 'results' %}">Results</a></li>
                     {% endif %}
                     {% endif %}
+                    {% if 'reviewblitz' in enabled_apps %}
+                    {% if user.verified %}
+                    <li><a href="{% url 'blitz_review_submit' %}">Submit a review</a></li>
+                    {% endif %}
+                    {% if perms.reviewblitz.approve %}
+                    <li><a href="{% url 'blitz_review_approval_queue' %}">Review approval queue</a></li>
+                    {% endif %}
+                    {% endif %}
+                    {% if user.is_staff %}
+                    <li><a href="/admin/">Admin</a></li>
+                    {% endif %}
                     {% if user.is_authenticated %}
                     <li{% block active_edit_user_info %}{% endblock %}><a href="{% url 'edit_user_info' %}">Edit user info</a></li>
                         {% if not user.verified %}

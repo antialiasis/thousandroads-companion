@@ -5,3 +5,5 @@ staticfiles
 db.sqlite3
 fanficforum/local_settings.py
 old-git
+.idea
+.python-version
