@@ -32,6 +32,10 @@ class ReviewBlitz(models.Model):
     def get_current(cls):
         return cls.objects.latest("start_date")
 
+    def current_week_index(self):
+        delta = datetime.now() - self.start_date
+        return int(delta.total_seconds() / (7 * 24 * 60 * 60))
+
 
 class BlitzReview(models.Model):
     class Meta:
@@ -39,8 +43,12 @@ class BlitzReview(models.Model):
     blitz = models.ForeignKey(ReviewBlitz, related_name='blitz_reviews', on_delete=models.CASCADE)
     review = models.ForeignKey(Review, related_name='blitz_reviews', on_delete=models.CASCADE)
     theme = models.BooleanField(default=False)
-    score = models.PositiveIntegerField()
+    score = models.DecimalField(max_digits=4, decimal_places=2)
     approved = models.BooleanField(default=False)
 
     def __str__(self):
         return "{} for {}".format(self.review, self.blitz)
+
+    def week_index(self):
+        delta = self.review.posted_date - self.blitz.start_date
+        return int(delta.total_seconds() / (7 * 24 * 60 * 60))

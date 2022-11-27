@@ -596,7 +596,7 @@ class Review(ForumObject, models.Model):
         return "{}'s review on {}".format(self.author, self.fic.title)
 
     def link(self):
-        return f"https://{settings.FORUM_URL}?posts/{self.post_id}/"
+        return f"https://{settings.FORUM_URL}posts/{self.post_id}/"
 
     def link_html(self):
         return f'<a href="{self.link()}">{self}</a>'
@@ -607,6 +607,7 @@ class Review(ForumObject, models.Model):
     @classmethod
     def get_page_class(self):
         return ReviewPage
+
 
 class ReviewPage(FicPage):
     object_id_regexen = (
@@ -633,6 +634,3 @@ class ReviewPage(FicPage):
         self.object.save()
 
         return self.object
-
-
-

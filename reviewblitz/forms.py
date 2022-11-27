@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from forum.models import ReviewPage
-from reviewblitz.models import BlitzReview
+from reviewblitz.models import BlitzReview, ReviewBlitz
 
 
 class ReviewField(forms.Field):
@@ -38,4 +38,11 @@ class BlitzReviewSubmissionForm(forms.Form):
                 code="forbidden",
                 params={"author": author}
             )
+        blitz = ReviewBlitz.get_current()
+        if review.word_count < blitz.scoring.min_words:
+            raise ValidationError("This review does not meet the minimum word count for this Review Blitz!")
+        if review.posted_date < blitz.start_date:
+            raise ValidationError("This review was posted before the start of this Blitz!")
+        if review.posted_date >= blitz.end_date:
+            raise ValidationError("This review was posted after the end of this Blitz!")
         return review

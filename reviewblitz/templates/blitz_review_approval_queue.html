@@ -10,36 +10,6 @@
     {% else %}<p>There are currently {{ blitzreview_list|length }} reviews awaiting approval.</p>
     {% endif %}
 {% include "blitz_review_approval_queue_list.html" %}
-
-<style>
-    .pending-review {
-        padding: 1em;
-        background: white;
-        filter: drop-shadow(10px 5px 5px grey);
-        border: 1px solid lightgray;
-    }
-
-    dt {
-        float: left;
-        clear: left;
-    }
-  
-    dt::after {
-        content: ":";
-        margin-right: 0.3em;
-    }
-
-    dt, dd {
-        line-height: 1.5em;
-    }
-
-    @media (min-width: 992px) {
-        dt {
-            text-align: right;
-            min-width: 11em;
-        }
-    }
-</style>
 {% endblock %}
 
 {%  block scripts %}
