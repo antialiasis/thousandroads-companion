@@ -1,4 +1,4 @@
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Count
 from django.db.models.functions import Least, Floor
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -85,3 +85,11 @@ class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
                 f"{blitz_review_obj.review} was rejected. Please remember to inform {blitz_review_obj.review.author}."
             )
         return HttpResponseRedirect(reverse("blitz_review_approval_queue"))
+
+
+class BlitzLeaderboardView(ListView):
+    template_name = "blitz_leaderboard.html"
+    context_object_name = "leaderboard"
+
+    def get_queryset(self):
+        return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score'), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('points')

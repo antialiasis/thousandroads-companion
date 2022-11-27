@@ -309,6 +309,7 @@ blockquote.detail {
                     {% if perms.reviewblitz.approve %}
                     <li><a href="{% url 'blitz_review_approval_queue' %}">Review approval queue</a></li>
                     {% endif %}
+                    <li><a href="{% url 'blitz_leaderboard' %}">Leaderboard</a></li>
                     {% endif %}
                     {% if user.is_staff %}
                     <li><a href="/admin/">Admin</a></li>

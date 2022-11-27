@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load forum_utils %}
+{% block title %}Review Blitz Leaderboard{% endblock %}
+
+{% block content %}
+<h1>Review Blitz Leaderboard</h1>
+
+<p>This is the leaderboard for the ongoing Thousand Roads Review Blitz. To submit a review, {% if not user.is_authenticated %}please <a href="{% url 'login' %}">log in</a>{% elif not user.verified %}please <a href="{% url 'verify' %}">verify your Thousand Roads account</a>{% else %}<a href="{% url 'blitz_review_submit' %}">click here</a>{% endif %}.</p>
+
+<table class="table table-striped">
+<thead>
+<tr>
+<th>Reviewer</th>
+<th>Points</th>
+<th>Reviews written</th>
+<th>Chapters reviewed</th>
+<th>Words written</th>
+</tr>
+</thead>
+<tbody>
+{% for entry in leaderboard %}
+<tr>
+<td>{{entry.username}}</td>
+<td>{{entry.points}}</td>
+<td>{{entry.reviews}}</td>
+<td>{{entry.chapters}}</td>
+<td>{{entry.words}}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}
