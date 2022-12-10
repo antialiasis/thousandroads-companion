@@ -6,12 +6,12 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.generic import ListView, FormView
 from django.contrib import messages
 
-from forum.views import VerificationRequiredMixin
+from forum.views import LoginRequiredMixin, VerificationRequiredMixin
 from reviewblitz.models import BlitzReview, ReviewBlitz
 from reviewblitz.forms import BlitzReviewSubmissionForm
 
 
-class BlitzReviewSubmissionFormView(VerificationRequiredMixin, FormView):
+class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixin, FormView):
     form_class = BlitzReviewSubmissionForm
     template_name = "blitz_review_submit.html"
 

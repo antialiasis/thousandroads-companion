@@ -10,7 +10,7 @@ The functionality is split across a couple of 'apps', currently "awards," "fanfi
 
 You *should* be able to run this on your own machine by following these instructions:
 
-1. Make sure you have Python 3.7 and pip installed on your computer. I also highly recommend isolating your requirements in a [virtual environment](https://docs.python.org/3/library/venv.html).
+1. Make sure you have Python 3.8 and pip installed on your computer. I also highly recommend isolating your requirements in a [virtual environment](https://docs.python.org/3/library/venv.html).
 2. Clone this repository.
 3. (Optional but recommended) Navigate to the repository root folder, create a virtual environment (`python -m venv venv` will do it) and activate it (`source venv/bin/activate` on POSIX systems, `venv\Scripts\activate` on Windows).
 4. Run `pip install -r local-requirements.txt` in the root of the repo. This will install Django and a couple of other Python packages. (The regular `requirements.txt` is used for the production setup on Heroku and requires some extra things that you won't need to set this up locally.)
