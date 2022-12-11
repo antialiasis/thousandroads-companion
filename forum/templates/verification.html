@@ -11,7 +11,7 @@
 {% elif user.verified %}
 <p>You are already verified as <strong>{{user.member.link_html|safe}}</strong>. Score!</p>
 {% else %}
-<p>To verify your {{forum_name}} forum identity so that your nominations and votes can be counted in the fanfiction awards, you must prove that you control an account on the forums. This can be done automatically using the form below{% if user.member %}, but if you prefer, you can also have your identity verified manually by contacting an admin from your forum account{% endif %}.</p>
+<p>To verify your {{forum_name}} forum identity so that you can use the companion site, you must prove that you control an account on the forums. This can be done automatically using the form below{% if user.member %}, but if you prefer, you can also have your identity verified manually by contacting an admin from your forum account{% endif %}.</p>
 
 <p>You can verify your identity automatically by editing the "About you" section on your user profile to contain a verification code unique to your companion app user account. Your verification code is <strong>{{user.verification_code}}</strong>. To verify yourself, simply perform the following steps:</p>
 

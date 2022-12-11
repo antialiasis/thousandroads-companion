@@ -77,7 +77,7 @@ FORUM_URL = os.environ.get('FORUM_URL')
 fic_forums = os.environ.get('VALID_FIC_FORUMS')
 VALID_FIC_FORUMS = fic_forums.split(', ') if fic_forums else ()
 
-ENABLED_APPS = ['awards', 'reviewblitz']
+ENABLED_APPS = ['reviewblitz']
 
 
 # Forum awards settings
