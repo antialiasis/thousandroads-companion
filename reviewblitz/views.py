@@ -67,7 +67,7 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
 
 class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
     template_name = "blitz_review_approval_queue.html"
-    permission_required = "reviewblitz.blitzreview.approve"
+    permission_required = "reviewblitz.approve"
 
     def get_queryset(self):
         return BlitzReview.objects.filter(approved=False)
