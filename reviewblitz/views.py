@@ -94,7 +94,7 @@ class BlitzLeaderboardView(ListView):
     def get_queryset(self):
         return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score'), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
 
-class BlitzUserView(TemplateView):
+class BlitzUserView(LoginRequiredMixin, TemplateView):
     template_name = "blitz_user.html"
 
     def get_context_data(self, *args, **kwargs):
@@ -103,7 +103,12 @@ class BlitzUserView(TemplateView):
 
         approved_reviews = queryset.filter(blitz=ReviewBlitz.get_current(), approved=True)
         context['approved_reviews'] = approved_reviews
-        context['approved_score'] = approved_reviews.aggregate(approved_score=Sum('score')).get('approved_score')
+
+        approved_score = approved_reviews.aggregate(approved_score=Sum('score')).get('approved_score')
+        if approved_score is not None:
+            context['approved_score'] = approved_score
+        else:
+            context['approved_score'] = 0
 
         pending_reviews = queryset.filter(blitz=ReviewBlitz.get_current(), approved=False)
         context['pending_reviews'] = pending_reviews
