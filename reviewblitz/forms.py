@@ -40,7 +40,7 @@ class BlitzReviewSubmissionForm(forms.Form):
             )
         blitz = ReviewBlitz.get_current()
         if review.word_count < blitz.scoring.min_words:
-            raise ValidationError("This review does not meet the minimum word count for this Review Blitz!")
+            raise ValidationError("This review does not meet the minimum word count for this Review Blitz! Please submit a review at least {} words long.".format(blitz.scoring.min_words))
         if review.posted_date < blitz.start_date:
             raise ValidationError("This review was posted before the start of this Blitz!")
         if review.posted_date >= blitz.end_date:
