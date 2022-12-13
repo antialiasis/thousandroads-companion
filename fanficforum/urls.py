@@ -4,7 +4,7 @@ from django.views.generic.base import TemplateView, RedirectView
 from django.contrib.auth.views import LoginView, LogoutView
 from forum.views import VerificationView, RegisterView, EditUserInfoView, ForumObjectLookupView, PasswordResetLookupView, PasswordResetView, CatalogView, CatalogAuthorView, CatalogFicView, CatalogSearchView, CatalogGenreView, CatalogTagView
 from awards.views import NominationView, NominationLookupView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView, PastAwardsView
-from reviewblitz.views import BlitzReviewSubmissionFormView, BlitzReviewApprovalQueueView, BlitzLeaderboardView
+from reviewblitz.views import BlitzReviewSubmissionFormView, BlitzReviewApprovalQueueView, BlitzLeaderboardView, BlitzUserView
 from forum.models import Member, Fic
 
 from django.contrib import admin
@@ -48,6 +48,7 @@ urlpatterns = [
     url(r'^blitz/submit$', BlitzReviewSubmissionFormView.as_view(), name="blitz_review_submit"),
     url(r'^blitz/queue$', BlitzReviewApprovalQueueView.as_view(), name="blitz_review_approval_queue"),
     url(r'^blitz/leaderboard$', BlitzLeaderboardView.as_view(), name="blitz_leaderboard"),
+    url(r'^blitz/user$', BlitzUserView.as_view(), name="blitz_user"),
 
     url(r'^admin/', admin.site.urls),
 ]

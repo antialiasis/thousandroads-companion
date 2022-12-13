@@ -311,6 +311,9 @@ blockquote.detail {
                     {% endif %}
                     <li><a href="{% url 'blitz_leaderboard' %}">Leaderboard</a></li>
                     {% endif %}
+                    {% if user.is_authenticated %}
+                    <li><a href="{% url 'blitz_user' %}">Your Blitz Stats</a></li>
+                    {% endif %}
                     {% if user.is_staff %}
                     <li><a href="/admin/">Admin</a></li>
                     {% endif %}
