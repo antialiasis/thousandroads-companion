@@ -3,7 +3,7 @@ from django.db.models.functions import Least, Floor
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.views.generic import ListView, FormView
+from django.views.generic import ListView, FormView, TemplateView
 from django.contrib import messages
 
 from forum.views import LoginRequiredMixin, VerificationRequiredMixin
@@ -93,3 +93,19 @@ class BlitzLeaderboardView(ListView):
 
     def get_queryset(self):
         return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score'), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
+
+class BlitzUserView(TemplateView):
+    template_name = "blitz_user.html"
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(BlitzUserView, self).get_context_data(*args, **kwargs) 
+        queryset = BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), review__author=self.request.user.member.user_id).values('review__post_id', 'review__author', 'review__fic__title', 'review__posted_date', 'review__chapters', 'review__word_count', 'theme', 'score').order_by('-review__posted_date')
+
+        approved_reviews = queryset.filter(blitz=ReviewBlitz.get_current(), approved=True)
+        context['approved_reviews'] = approved_reviews
+        context['approved_score'] = approved_reviews.aggregate(approved_score=Sum('score')).get('approved_score')
+
+        pending_reviews = queryset.filter(blitz=ReviewBlitz.get_current(), approved=False)
+        context['pending_reviews'] = pending_reviews
+        context['pending_score'] = pending_reviews.aggregate(approved_score=Sum('score')).get('approved_score')
+        return context
