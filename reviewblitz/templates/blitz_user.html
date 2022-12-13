@@ -5,6 +5,9 @@
 {% block content %}
 <h1>{{user.username}}'s Blitz Stats</h1>
 
+{% if not user.verified %}
+<p>Please <a href="{% url 'verification' %}">verify your {{ forum_name }} account</a> to participate in Review Blitz!</p>
+{% else %}
 <p><strong>Total Points:</strong> {{ approved_score }}{% if pending_score %} ({{ pending_score }} pending){% endif %}</p>
 <p><strong>Total Reviews:</strong> {{ approved_reviews|length }}{% if pending_reviews %} ({{ pending_reviews|length }} pending){% endif %}</p>
 
@@ -37,6 +40,7 @@
 
 <h2>Approved Reviews</h2>
 
+{% if approved_reviews %}
 <table class="table table-striped">
 <thead>
 <tr>
@@ -59,4 +63,13 @@
 {% endfor %}
 </tbody>
 </table>
+{% else %}
+{% if pending_reviews %}
+<p>Your review submissions have been received, and the logistics team will review them as soon as possible!</p>
+{% else %}
+<p>You haven't submitted any reviews yet! To do so, visit <a href="{% url 'blitz_review_submit' %}">the review submission page</a>.</p>
+{% endif %}
+{% endif %}
+{% endif %}
+
 {% endblock %}
