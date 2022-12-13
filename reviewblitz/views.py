@@ -57,7 +57,7 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
             score=score,
         )
         messages.success(self.request, "Your review has been submitted and is pending approval.")
-        return HttpResponseRedirect(reverse("home"))
+        return HttpResponseRedirect(reverse("blitz_user"))
 
     def get_form_kwargs(self):
         kwargs = super(BlitzReviewSubmissionFormView, self).get_form_kwargs()
