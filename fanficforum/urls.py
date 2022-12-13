@@ -48,7 +48,7 @@ urlpatterns = [
     url(r'^blitz/submit$', BlitzReviewSubmissionFormView.as_view(), name="blitz_review_submit"),
     url(r'^blitz/queue$', BlitzReviewApprovalQueueView.as_view(), name="blitz_review_approval_queue"),
     url(r'^blitz/leaderboard$', BlitzLeaderboardView.as_view(), name="blitz_leaderboard"),
-    url(r'^blitz/blitz_user$', BlitzUserView.as_view(), name="blitz_user"),
+    url(r'^blitz/user$', BlitzUserView.as_view(), name="blitz_user"),
 
     url(r'^admin/', admin.site.urls),
 ]
