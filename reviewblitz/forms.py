@@ -19,7 +19,11 @@ class ReviewField(forms.Field):
 
 class BlitzReviewSubmissionForm(forms.Form):
     review = ReviewField(label="Review link")
-    chapters = forms.IntegerField(min_value=1)
+    # Entering very large numbers of chapters causes an error to be thrown
+    # as the integer becomes too large to be stored in the db field
+    # This may have been fixed in later Django releases
+    # https://code.djangoproject.com/ticket/12030
+    chapters = forms.IntegerField(min_value=1, max_value=1000)
     satisfies_theme = forms.BooleanField(label="Satisfies theme", required=False)
 
     def __init__(self, *args, **kwargs):
