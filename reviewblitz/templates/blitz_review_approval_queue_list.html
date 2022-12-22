@@ -11,7 +11,7 @@
                 <dd>{{ review.review.fic.link_html|safe }}</dd>
             <dt>Chapters reviewed</dt>
                 <dd>{{ review.review.chapters }}</dd>
-            {% if review.chapter_links %}
+            {% if review.chapter_links.all %}
             <dt>Long chapter links</dt>
                 <dd>
                     <ul class="list-unstyled chapter-links">
