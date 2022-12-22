@@ -99,7 +99,12 @@ class BlitzUserView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(BlitzUserView, self).get_context_data(*args, **kwargs) 
-        queryset = BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), review__author=self.request.user.member.user_id).values('review__post_id', 'review__author', 'review__fic__title', 'review__posted_date', 'review__chapters', 'review__word_count', 'theme', 'score').order_by('-review__posted_date')
+        try:
+            queryset = BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), review__author=self.request.user.member.user_id).values('review__post_id', 'review__author', 'review__fic__title', 'review__posted_date', 'review__chapters', 'review__word_count', 'theme', 'score').order_by('-review__posted_date')
+        except AttributeError:
+            # User not verified
+            # Query fails because they don't have a user_id
+            queryset = BlitzReview.objects.none()
 
         approved_reviews = queryset.filter(blitz=ReviewBlitz.get_current(), approved=True)
         context['approved_reviews'] = approved_reviews
