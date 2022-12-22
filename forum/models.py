@@ -580,6 +580,44 @@ class Post(object):
         member, created = Member.objects.get_or_create(user_id=user_id, defaults={"username": username})
         return member
 
+    @property
+    def threadmark_title(self):
+        threadmark_elem = self._soup.find(class_="threadmarkLabel")
+        return threadmark_elem.get_text() if threadmark_elem else ""
+
+
+class PostPage(FicPage):
+    object_id_regexen = (
+        r'threads/(?:[^&.]*\.)?(?:\d+)(?:/page-\d+|/unread)?/?(?:#?post-(?P<post_id>\d+))',
+        r'posts/(?P<post_id>\d+)'
+    )
+
+    @classmethod
+    def from_params(cls, save=False, force_download=False, url=None, object_type=None, **kwargs):
+        return super().from_params(save, force_download, url, 'post', **kwargs)
+
+    def load_object(self, save=True, object_type=None):
+        soup = self.get_soup()
+
+        if not self.is_fic():
+            raise ValidationError(u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid post." % self.object.link())
+
+        post = self.get_post()
+        self.object.author = post.author
+        self.object.posted_date = post.posted_date
+        self.object.word_count = post.word_count
+        if hasattr(self.object, 'threadmark_title'):
+            self.object.threadmark_title = post.threadmark_title
+
+        thread_params = FicPage.get_params_from_url(soup.find(class_="message-attribution-main").a["href"])
+        self.object.fic = FicPage.from_params(thread_id=thread_params["thread_id"], save=True).object
+
+        self.object.chapters = 1
+        if save:
+            self.object.save()
+
+        return self.object
+
 
 class Review(ForumObject, models.Model):
     post_id = models.PositiveIntegerField(unique=True, primary_key=True)
@@ -609,28 +647,58 @@ class Review(ForumObject, models.Model):
         return ReviewPage
 
 
-class ReviewPage(FicPage):
-    object_id_regexen = (
-        r'threads/(?:[^&.]*\.)?(?:\d+)(?:/page-\d+|/unread)?/?(?:#?post-(?P<post_id>\d+))',
-        r'posts/(?P<post_id>\d+)'
-    )
+class ReviewPage(PostPage):
     object_class = Review
 
     def load_object(self, save=True, object_type=None):
-        soup = self.get_soup()
-
-        if not self.is_fic():
-            raise ValidationError( u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid review." % self.object.link())
-
-        post = self.get_post()
-        self.object.author = post.author
-        self.object.posted_date = post.posted_date
-        self.object.word_count = post.word_count
-
-        thread_params = FicPage.get_params_from_url(soup.find(class_="message-attribution-main").a["href"])
-        self.object.fic = FicPage.from_params(thread_id=thread_params["thread_id"], save=True).object
+        self.object = super(ReviewPage, self).load_object(save=False)
 
         self.object.chapters = 1
-        self.object.save()
+        if save:
+            self.object.save()
+
+        return self.object
+
+
+class Chapter(models.Model):
+    """A chapter of a fic."""
+
+    post_id = models.PositiveIntegerField(unique=True, primary_key=True)
+    fic = models.ForeignKey(Fic, related_name='chapters', on_delete=models.CASCADE)
+    threadmark_title = models.CharField(max_length=255)
+    posted_date = models.DateTimeField()
+    word_count = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ('fic', 'posted_date')
+
+    def __str__(self):
+        return "{}: {}".format(self.fic.title, self.threadmark_title) or "{}: post #{}".format(self.fic.title, self.post_id)
+
+    def link(self):
+        return f"https://{settings.FORUM_URL}posts/{self.post_id}/"
+
+    def link_html(self):
+        return f'<a href="{self.link()}">{self}</a>'
+
+    def link_bbcode(self):
+        return f"[url={self.link()}]{self}[/url]"
+
+    @classmethod
+    def get_page_class(self):
+        return ChapterPage
+
+
+class ChapterPage(PostPage):
+    object_class = Chapter
+
+    def load_object(self, save=True, object_type=None):
+        self.object = super(ChapterPage, self).load_object(save=False)
+
+        if self.object.author not in self.object.fic.get_authors():
+            raise ValidationError(u"This post (%s) does not seem to be by an author of the thread it is in. If this is in error, please contact Thousand Roads staff." % self.object.link())
+
+        if save:
+            self.object.save()
 
         return self.object

@@ -11,12 +11,22 @@
                 <dd>{{ review.review.fic.link_html|safe }}</dd>
             <dt>Chapters reviewed</dt>
                 <dd>{{ review.review.chapters }}</dd>
+            {% if review.chapter_links %}
+            <dt>Long chapter links</dt>
+                <dd>
+                    <ul class="list-unstyled chapter-links">
+                        {% for chapter in review.chapter_links.all %}
+                        <li><a href="{{chapter.chapter.link}}" target="_blank">{{chapter.chapter}}</a></li>
+                        {% endfor %}
+                    </ul>
+                </dd>
+            {% endif %}
             <dt>Word count</dt>
                 <dd>{{ review.review.word_count }}</dd>
             <dt>Satisfies theme</dt>
                 <dd>{{ review.theme }}</dd>
             <dt>Score</dt>
-                <dd>{{ review.score|floatformat }}</dd>
+                <dd>{{ review.score|floatformat:2 }}</dd>
         </dl>
         <form name="review_assessment_{{ review.id }}"
               onsubmit="return confirmDelete(this.valid.checked);"

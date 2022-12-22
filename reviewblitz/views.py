@@ -7,7 +7,7 @@ from django.views.generic import ListView, FormView, TemplateView
 from django.contrib import messages
 
 from forum.views import LoginRequiredMixin, VerificationRequiredMixin
-from reviewblitz.models import BlitzReview, ReviewBlitz
+from reviewblitz.models import BlitzReview, ReviewBlitz, ReviewChapterLink
 from reviewblitz.forms import BlitzReviewSubmissionForm
 
 
@@ -50,12 +50,26 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
             print(f"Claiming weekly theme - +{blitz.scoring.theme_bonus} points!")
             score += blitz.scoring.theme_bonus
 
-        BlitzReview.objects.create(
+        long_chapters = []
+        for chapter in form.cleaned_data["chapter_links"]:
+            if chapter.word_count >= blitz.scoring.long_chapter_bonus_words:
+                score += blitz.scoring.long_chapter_bonus
+                long_chapters.append(chapter)
+
+        blitzreview = BlitzReview.objects.create(
             blitz=blitz,
             review=review,
             theme=form.cleaned_data["satisfies_theme"],
             score=score,
         )
+
+        for chapter in long_chapters:
+            chapter.save()
+            ReviewChapterLink.objects.create(
+                review=blitzreview,
+                chapter=chapter
+            )
+
         messages.success(self.request, "Your review has been submitted and is pending approval.")
         return HttpResponseRedirect(reverse("blitz_user"))
 
@@ -93,6 +107,7 @@ class BlitzLeaderboardView(ListView):
 
     def get_queryset(self):
         return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score'), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
+
 
 class BlitzUserView(LoginRequiredMixin, TemplateView):
     template_name = "blitz_user.html"

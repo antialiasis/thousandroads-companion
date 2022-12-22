@@ -1,5 +1,5 @@
 from django.db import models
-from forum.models import Fic, Member, Review
+from forum.models import Fic, Member, Review, Chapter
 
 
 class ReviewBlitzScoring(models.Model):
@@ -10,6 +10,8 @@ class ReviewBlitzScoring(models.Model):
     consecutive_chapter_interval = models.PositiveIntegerField()
     consecutive_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2)
     theme_bonus = models.DecimalField(max_digits=3, decimal_places=2)
+    long_chapter_bonus_words = models.PositiveIntegerField()
+    long_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2)
 
     def __str__(self):
         return self.name
@@ -52,3 +54,11 @@ class BlitzReview(models.Model):
     def week_index(self):
         delta = self.review.posted_date - self.blitz.start_date
         return int(delta.total_seconds() / (7 * 24 * 60 * 60))
+
+
+class ReviewChapterLink(models.Model):
+    review = models.ForeignKey(BlitzReview, related_name='chapter_links', on_delete=models.CASCADE)
+    chapter = models.ForeignKey(Chapter, related_name='reviews', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return "Chapter: {} reviewed in {}'s review".format(self.chapter, self.review.author)

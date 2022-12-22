@@ -84,11 +84,11 @@ ENABLED_APPS = ['reviewblitz']
 
 MIN_YEAR = 2008
 
-MAX_YEAR = int(os.environ.get('MAX_YEAR', datetime.utcnow().year - 1))
+MAX_YEAR = int(os.environ.get('MAX_YEAR', datetime.utcnow().year))
 
 SYSTEM_START_YEAR = 2014
 
-YEAR = int(os.environ.get('YEAR', MAX_YEAR))
+YEAR = int(os.environ.get('YEAR', (datetime.utcnow() - timedelta(days=180)).year))
 
 def parse_environ_date(key):
     environ_date = os.environ.get(key, None)
