@@ -61,4 +61,4 @@ class ReviewChapterLink(models.Model):
     chapter = models.ForeignKey(Chapter, related_name='reviews', on_delete=models.CASCADE)
 
     def __str__(self):
-        return "Chapter: {} reviewed in {}'s review".format(self.chapter, self.review.author)
+        return "Chapter: {} reviewed in {}'s review".format(self.chapter, self.review.review.author)

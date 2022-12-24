@@ -11,7 +11,7 @@ class ReviewField(forms.Field):
         except ValueError as e:
             raise ValidationError("Invalid review URL", code="invalid") from e
 
-        if BlitzReview.objects.filter(review=review).exists():
+        if BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), review=review).exists():
             raise ValidationError("This review has already been submitted.", code="invalid")
 
         return review

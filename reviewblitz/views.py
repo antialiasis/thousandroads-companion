@@ -84,7 +84,7 @@ class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
     permission_required = "reviewblitz.approve"
 
     def get_queryset(self):
-        return BlitzReview.objects.filter(approved=False)
+        return BlitzReview.objects.filter(approved=False, blitz=ReviewBlitz.get_current())
 
     def post(self, request, *args, **kwargs):
         blitz_review_obj = BlitzReview.objects.get(id=request.POST.get("blitz_review_id"))
