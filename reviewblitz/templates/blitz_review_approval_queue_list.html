@@ -16,7 +16,7 @@
                 <dd>
                     <ul class="list-unstyled chapter-links">
                         {% for chapter in review.chapter_links.all %}
-                        <li><a href="{{chapter.chapter.link}}" target="_blank">{{chapter.chapter}}</a></li>
+                        <li><a href="{{chapter.chapter.link}}" target="_blank">{{chapter.chapter}}</a> ({{chapter.chapter.word_count}} words)</li>
                         {% endfor %}
                     </ul>
                 </dd>
