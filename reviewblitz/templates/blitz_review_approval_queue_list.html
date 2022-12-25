@@ -29,15 +29,13 @@
                 <dd>{{ review.score|floatformat:2 }}</dd>
         </dl>
         <form name="review_assessment_{{ review.id }}"
-              onsubmit="return confirmDelete(this.valid.checked);"
               action="{% url 'blitz_review_approval_queue' %}" method="post">
             {% csrf_token %}
             <input type="hidden" name="blitz_review_id" value="{{ review.id }}" />
             <div>
-                <input type="checkbox" id="valid_{{ review.id }}" name="valid">
-                <label for="valid_{{ review.id }}">Approve review?</label>
+                <button type="submit" class="btn btn-success" id="approve_{{ review.id }}" name="valid" value="1">Approve</button>
+                <button type="submit" class="btn btn-danger" id="reject_{{ review.id }}" onclick="return confirmDelete(false);">Reject</button>
             </div>
-            <button type="submit" class="btn btn-primary">Submit assessment</button>
         </form>
     </div>
 </div>
