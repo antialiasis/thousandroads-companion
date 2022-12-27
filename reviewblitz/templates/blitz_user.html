@@ -10,7 +10,7 @@
 {% else %}
 <p><strong>Total Points:</strong> {{ approved_score }}{% if pending_score %} ({{ pending_score }} pending){% endif %}</p>
 <p><strong>Total Reviews:</strong> {{ approved_reviews|length }}{% if pending_reviews %} ({{ pending_reviews|length }} pending){% endif %}</p>
-<p><strong>Prize Points</strong> {{ prize_points }}</p>
+<p><strong>Prize Points:</strong> {{ prize_points }}</p>
 
 {% if pending_reviews %}
 <h2>Pending Reviews</h2>

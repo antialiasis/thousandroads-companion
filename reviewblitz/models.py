@@ -63,10 +63,12 @@ class ReviewChapterLink(models.Model):
     def __str__(self):
         return "Chapter: {} reviewed in {}'s review".format(self.chapter, self.review.review.author)
 
+
 class BlitzUser(models.Model):
     blitz = models.ForeignKey(ReviewBlitz, related_name='blitzes', on_delete=models.CASCADE)
     member = models.ForeignKey(Member, related_name='blitz_members', on_delete=models.CASCADE)
     bonus_points = models.DecimalField(max_digits=4, decimal_places=2, default=0)
     points_spent = models.DecimalField(max_digits=4, decimal_places=2, default=0)
+
     def __str__(self):
         return "{}'s stats for {}".format(self.member, self.blitz)
