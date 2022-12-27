@@ -1,13 +1,14 @@
-from django.db.models import Sum, F, Count
+from django.db.models import Sum, F, Count, Max
 from django.db.models.functions import Least, Floor
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views.generic import ListView, FormView, TemplateView
 from django.contrib import messages
+from django.core.exceptions import ObjectDoesNotExist
 
 from forum.views import LoginRequiredMixin, VerificationRequiredMixin
-from reviewblitz.models import BlitzReview, ReviewBlitz, ReviewChapterLink
+from reviewblitz.models import BlitzReview, ReviewBlitz, ReviewChapterLink, BlitzUser
 from reviewblitz.forms import BlitzReviewSubmissionForm
 
 
@@ -70,6 +71,10 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
                 chapter=chapter
             )
 
+        # If the user hasn't already gotten their own "blitz user" instance,
+        # create one now
+        BlitzUser.objects.get_or_create(blitz=blitz, member=review.author)
+
         messages.success(self.request, "Your review has been submitted and is pending approval.")
         return HttpResponseRedirect(reverse("blitz_user"))
 
@@ -106,14 +111,27 @@ class BlitzLeaderboardView(ListView):
     context_object_name = "leaderboard"
 
     def get_queryset(self):
-        return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score'), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
-
+        return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score') + Max('review__author__blitz_members__bonus_points'), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
 
 class BlitzUserView(LoginRequiredMixin, TemplateView):
     template_name = "blitz_user.html"
 
     def get_context_data(self, *args, **kwargs):
         context = super(BlitzUserView, self).get_context_data(*args, **kwargs) 
+
+        # Get user info
+        # Any bonuses from prize fulfillment (or other sources)
+        # Any points spent for prizes
+        try:
+            user_queryset = BlitzUser.objects.filter(blitz=ReviewBlitz.get_current(), member=self.request.user.member.user_id).get()
+        except (AttributeError, ObjectDoesNotExist):
+            # User not verified
+            # Query fails because they don't have a user_id
+            # And/or user does not have an associate Blitz User model
+            # (has not submitted a review)
+            # Either is actually okay
+            user_queryset = BlitzUser.objects.none()
+
         try:
             queryset = BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), review__author=self.request.user.member.user_id).values('review__post_id', 'review__author', 'review__fic__title', 'review__posted_date', 'review__chapters', 'review__word_count', 'theme', 'score').order_by('-review__posted_date')
         except AttributeError:
@@ -129,6 +147,18 @@ class BlitzUserView(LoginRequiredMixin, TemplateView):
             context['approved_score'] = approved_score
         else:
             context['approved_score'] = 0
+
+        # Apply any potential bonus points to get effective score
+        print(context['approved_score'])
+        print(user_queryset.bonus_points)
+        if user_queryset:
+            context['approved_score'] = context['approved_score'] + user_queryset.bonus_points
+
+        # Show prize points available by deducting points spent from total score
+        if user_queryset:
+            context['prize_points'] = context['approved_score'] - user_queryset.points_spent
+        else:
+            context['prize_points'] = context['approved_score']
 
         pending_reviews = queryset.filter(blitz=ReviewBlitz.get_current(), approved=False)
         context['pending_reviews'] = pending_reviews
