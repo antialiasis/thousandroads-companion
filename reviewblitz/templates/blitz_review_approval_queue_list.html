@@ -4,34 +4,33 @@
         <h3 class="panel-title"><a href="{{review.review.link}}" target="_blank">{{ review.review}}</a></h3>
     </div>
     <div class="panel-body">
-        <dl class="dl-horizontal">
-            <dt>Reviewer</dt>
-                <dd>{{ review.review.author.link_html|safe }}</dd>
-            <dt>Fic reviewed</dt>
-                <dd>{{ review.review.fic.link_html|safe }}</dd>
-            <dt>Chapters reviewed</dt>
-                <dd>{{ review.review.chapters }}</dd>
-            {% if review.chapter_links.all %}
-            <dt>Long chapter links</dt>
-                <dd>
-                    <ul class="list-unstyled chapter-links">
-                        {% for chapter in review.chapter_links.all %}
-                        <li><a href="{{chapter.chapter.link}}" target="_blank">{{chapter.chapter}}</a> ({{chapter.chapter.word_count}} words)</li>
-                        {% endfor %}
-                    </ul>
-                </dd>
-            {% endif %}
-            <dt>Word count</dt>
-                <dd>{{ review.review.word_count }}</dd>
-            <dt>Satisfies theme</dt>
-                <dd>{{ review.theme }}</dd>
-            <dt>Score</dt>
-                <dd>{{ review.score|floatformat:2 }}</dd>
-        </dl>
-        <form name="review_assessment_{{ review.id }}"
-              action="{% url 'blitz_review_approval_queue' %}" method="post">
+        <form name="review_assessment_{{ review.id }}" action="{% url 'blitz_review_approval_queue' %}" method="post">
             {% csrf_token %}
             <input type="hidden" name="blitz_review_id" value="{{ review.id }}" />
+            <dl class="dl-horizontal">
+                <dt>Reviewer</dt>
+                    <dd>{{ review.review.author.link_html|safe }}</dd>
+                <dt>Fic reviewed</dt>
+                    <dd>{{ review.review.fic.link_html|safe }}</dd>
+                <dt>Chapters reviewed</dt>
+                    <dd>{{ review.review.chapters }}</dd>
+                {% if review.chapter_links.all %}
+                <dt>Long chapter links</dt>
+                    <dd>
+                        <ul class="list-unstyled chapter-links">
+                            {% for chapter in review.chapter_links.all %}
+                            <li><a href="{{chapter.chapter.link}}" target="_blank">{{chapter.chapter}}</a> ({{chapter.chapter.word_count}} words)</li>
+                            {% endfor %}
+                        </ul>
+                    </dd>
+                {% endif %}
+                <dt>Word count</dt>
+                    <dd>{{ review.review.word_count }}</dd>
+                <dt>Satisfies theme</dt>
+                    <dd><input type="checkbox" name="theme" value="1"{% if review.theme %} checked{% endif %}></dd>
+                <dt>Score</dt>
+                    <dd>{{ review.score|floatformat:2 }}</dd>
+            </dl>
             <div>
                 <button type="submit" class="btn btn-success" id="approve_{{ review.id }}" name="valid" value="1">Approve</button>
                 <button type="submit" class="btn btn-danger" id="reject_{{ review.id }}" onclick="return confirmDelete(false);">Reject</button>

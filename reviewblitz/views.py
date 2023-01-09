@@ -47,9 +47,13 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         print(f"Chapter bonuses: {chapter_bonuses}")
         score += chapter_bonuses * blitz.scoring.consecutive_chapter_bonus
 
+        theme_bonus = False
+
         if form.cleaned_data["satisfies_theme"] and not has_claimed_weekly_theme:
             print(f"Claiming weekly theme - +{blitz.scoring.theme_bonus} points!")
             score += blitz.scoring.theme_bonus
+            theme_bonus = True
+
 
         long_chapters = []
         for chapter in form.cleaned_data["chapter_links"]:
@@ -60,7 +64,7 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         blitzreview = BlitzReview.objects.create(
             blitz=blitz,
             review=review,
-            theme=form.cleaned_data["satisfies_theme"],
+            theme=theme_bonus,
             score=score,
         )
 
@@ -95,7 +99,15 @@ class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
         blitz_review_obj = BlitzReview.objects.get(id=request.POST.get("blitz_review_id"))
         if request.POST.get("valid"):
             blitz_review_obj.approved = True
-            blitz_review_obj.save(update_fields=("approved",))
+            if request.POST.get("theme") and not blitz_review_obj.theme:
+                # Add theme bonus
+                blitz_review_obj.score += blitz_review_obj.blitz.scoring.theme_bonus
+                blitz_review_obj.theme = True
+            elif blitz_review_obj.theme and not request.POST.get("theme"):
+                # Remove theme bonus
+                blitz_review_obj.score -= blitz_review_obj.blitz.scoring.theme_bonus
+                blitz_review_obj.theme = False
+            blitz_review_obj.save()
             messages.success(request, f"{blitz_review_obj.review} was approved.")
         else:
             blitz_review_obj.delete()
@@ -112,6 +124,7 @@ class BlitzLeaderboardView(ListView):
 
     def get_queryset(self):
         return BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), approved=True).values('review__author').annotate(points=Sum('score') + Coalesce(Max('review__author__blitz_members__bonus_points'), 0), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
+
 
 class BlitzUserView(LoginRequiredMixin, TemplateView):
     template_name = "blitz_user.html"
