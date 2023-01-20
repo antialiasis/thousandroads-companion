@@ -60,6 +60,9 @@ class ReviewChapterLink(models.Model):
     review = models.ForeignKey(BlitzReview, related_name='chapter_links', on_delete=models.CASCADE)
     chapter = models.ForeignKey(Chapter, related_name='reviews', on_delete=models.CASCADE)
 
+    class Meta:
+        ordering: ["chapter__post_id"]
+
     def __str__(self):
         return "Chapter: {} reviewed in {}'s review".format(self.chapter, self.review.review.author)
 

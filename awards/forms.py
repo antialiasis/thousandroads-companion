@@ -8,7 +8,7 @@ from django.forms.models import ModelChoiceIterator
 from django.utils.html import mark_safe
 from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR, check_eligible
 from forum.models import Member, MemberPage, Fic, FicPage
-from forum.forms import ForumLinkField
+from forum.forms import ForumLinkField, ForumObjectField
 
 
 class YearAwardForm(forms.Form):
@@ -75,47 +75,7 @@ class FicForm(forms.ModelForm):
         fields = ('title', 'authors', 'thread_id', 'post_id')
 
 
-class IsPostLinkWidget(forms.CheckboxInput):
-    template_name = 'widgets/is_post_link.html'
-
-
-class ForumObjectWidget(forms.MultiWidget):
-    """
-    A widget for entering a link to a fic/profile, used for nominating.
-    ForumObjectField handles giving this the correct component
-    widgets, which are 1) a drop-down with a list of objects of the
-    appropriate type that already exist in the system, and 2) a text
-    field into which a link can be entered.
-
-    """
-    template_name = 'widgets/forum_object.html'
-
-    def __init__(self, object_class, *args, **kwargs):
-        self.object_class = object_class
-        super(ForumObjectWidget, self).__init__(*args, **kwargs)
-
-    def decompress(self, value):
-        if value:
-            # Value should be a Fic object or a Member object
-            if isinstance(value, self.object_class):
-                if value.pk is not None:
-                    # An existing fic/member: select that fic/member in the first subwidget
-                    decompressed = [value.pk, '']
-                else:
-                    # A not-yet-existing fic/member: put its link in the second widget
-                    decompressed = [None, value.link()]
-            else:
-                # value is probably a primary key
-                decompressed = [value, '']
-        else:
-            decompressed = [None, '']
-        if self.object_class == Fic:
-            # Add an appropriate value for the post link field.
-            decompressed.append(bool(isinstance(value, Fic) and value.post_id))
-        return decompressed
-
-
-class ForumObjectSelect(forms.Select):
+class NominationObjectSelect(forms.Select):
     """
     A customized Select that restricts the actual choices given to
     those already nominated this year and the given value (if it
@@ -124,10 +84,10 @@ class ForumObjectSelect(forms.Select):
     """
     def __init__(self, object_class, *args, **kwargs):
         self.object_class = object_class
-        super(ForumObjectSelect, self).__init__(*args, **kwargs)
+        super(NominationObjectSelect, self).__init__(*args, **kwargs)
 
     def optgroups(self, name, value, attrs=None):
-        groups = super(ForumObjectSelect, self).optgroups(name, value, attrs)
+        groups = super(NominationObjectSelect, self).optgroups(name, value, attrs)
 
         for val in value:
             if val and val not in (choice[0] for choice in self.choices):
@@ -150,92 +110,38 @@ class ForumObjectSelect(forms.Select):
         return groups
 
 
-class ForumObjectIterator(ModelChoiceIterator):
+class NominationObjectIterator(ModelChoiceIterator):
     """
     A version of ModelChoiceIterator that limits the displayed choices
     to those objects that have been nominated in the current year.
 
     """
     def __init__(self, field):
-        super(ForumObjectIterator, self).__init__(field)
+        super(NominationObjectIterator, self).__init__(field)
         self.queryset = self.queryset.nominated_in_year(CURRENT_YEAR)
 
 
-class ForumObjectChoiceField(forms.ModelChoiceField):
+class NominationObjectChoiceField(forms.ModelChoiceField):
     def _get_choices(self):
-        return ForumObjectIterator(self)
+        return NominationObjectIterator(self)
 
     choices = property(_get_choices, forms.ChoiceField._set_choices)
 
 
-class ForumObjectField(forms.MultiValueField):
+class NominationObjectField(ForumObjectField):
     """
-    A field for entering a fic or member on the forum.
+    A field for nominating a forum object (fic/member).
 
     """
-    empty_values = [None, '', ('', ''), ('', '', False)]
-
-    def __init__(self, page_class, *args, **kwargs):
-        # Must pretend the field isn't required even if it is, so that
-        # MultiValueField's clean() won't stop us in our tracks later.
-        self.really_required = kwargs.pop('required', True)
-        self.object_class = page_class.object_class
-        # The actual field's queryset argument needs to be the entire collection of fics/members
-        object_dropdown = ForumObjectChoiceField(queryset=self.object_class.objects.all(), widget=ForumObjectSelect(self.object_class))
-        fields = [
-            object_dropdown,
-            ForumLinkField(page_class)
-        ]
-        if self.object_class == Fic:
-            fields.append(forms.BooleanField(required=False, widget=IsPostLinkWidget()))
-        super(ForumObjectField, self).__init__(fields, *args, required=False, **kwargs)
-
-        self.widget = ForumObjectWidget(self.object_class, [field.widget for field in self.fields])
-
-    def validate(self, value):
-        # Validate requiredness, since we bypass MultiValueField's
-        # normal requiredness validation.
-        if self.really_required and value is None:
-            raise ValidationError(self.error_messages['required'], code='required')
-
-    def compress(self, data_list):
-        if data_list:
-            if data_list[0]:
-                # We have an existing fic/member selected
-                return data_list[0]
-            elif data_list[1]:
-                # Return the object of the FicPage/MemberPage.
-                return data_list[1].object
-        return None
-
-    def prepare_value(self, value):
-        if isinstance(value, self.object_class):
-            return value.pk
-        return value
+    def get_object_field(self):
+        return NominationObjectChoiceField(queryset=self.object_class.objects.all(), widget=NominationObjectSelect(self.object_class))
 
     def clean(self, value):
-        if self.object_class == Fic and value[1] and not value[2]:
-            # We have a link, and we haven't checked the post link box - make
-            # sure the link is a thread link
-            try:
-                params = FicPage.get_params_from_url(value[1])
-            except ValueError:
-                raise ValidationError(u"Invalid Fic URL. Please enter the full URL to a thread or post on the %s forums." % settings.FORUM_NAME)
-            thread_id = params.get('thread_id')
-            if not thread_id:
-                # We don't actually have a thread ID
-                raise ValidationError(u"You have entered a link to a post with no thread ID, but not checked the single-post fic box. Please enter a thread link.")
-            # Set the link to the thread link instead of the post before we clean
-            value[1] = Fic(thread_id=thread_id).link()
-        # Just save during clean - having more fics/members in the
-        # database can only be a good thing.
-        value = super(ForumObjectField, self).clean(value)
+        value = super(NominationObjectField, self).clean(value)
 
         # Validate eligibility
         check_eligible(value.get_page())
 
-        if value is not None:
-            value.save()
         return value
 
 
@@ -244,8 +150,8 @@ class NominationForm(forms.ModelForm):
     The form for a single nomination.
 
     """
-    nominee = ForumObjectField(MemberPage, help_text=u"Select the user from the drop-down or paste their profile URL into the text field.")
-    fic = ForumObjectField(FicPage, help_text=u"Select the fic from the drop-down or paste a link to it into the text field.")
+    nominee = NominationObjectField(MemberPage, help_text=u"Select the user from the drop-down or paste their profile URL into the text field.")
+    fic = NominationObjectField(FicPage, help_text=u"Select the fic from the drop-down or paste a link to it into the text field.")
 
     class Meta:
         model = Nomination

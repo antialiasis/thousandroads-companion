@@ -5,7 +5,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from forum.views import VerificationView, RegisterView, EditUserInfoView, ForumObjectLookupView, PasswordResetLookupView, PasswordResetView, CatalogView, CatalogAuthorView, CatalogFicView, CatalogSearchView, CatalogGenreView, CatalogTagView
 from awards.views import NominationView, NominationLookupView, AllNominationsView, UserNominationsView, AdminNominationView, VotingView, VotingStatsView, ResultsView, PastAwardsView
 from reviewblitz.views import BlitzReviewSubmissionFormView, BlitzReviewApprovalQueueView, BlitzLeaderboardView, BlitzUserView
-from forum.models import Member, Fic
+from forum.models import Member, Fic, Chapter
 
 from django.contrib import admin
 admin.autodiscover()
@@ -29,6 +29,7 @@ urlpatterns = [
 
     url(r'^lookup/fic/$', ForumObjectLookupView.as_view(model=Fic), name='lookup_fic'),
     url(r'^lookup/member/$', ForumObjectLookupView.as_view(model=Member), name='lookup_member'),
+    url(r'^lookup/chapter/$', ForumObjectLookupView.as_view(model=Chapter), name='lookup_chapter'),
 
     url(r'^nomination/$', NominationView.as_view(), name='nomination'),
     url(r'^nomination/all/(?:(?P<year>\d{4})/)?$', AllNominationsView.as_view(), name='all_nominations'),

@@ -7,9 +7,9 @@ from django.views.generic import ListView, FormView, TemplateView
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 
-from forum.views import LoginRequiredMixin, VerificationRequiredMixin
+from forum.views import LoginRequiredMixin, VerificationRequiredMixin, ForumObjectLookupView
 from reviewblitz.models import BlitzReview, ReviewBlitz, ReviewChapterLink, BlitzUser
-from reviewblitz.forms import BlitzReviewSubmissionForm
+from reviewblitz.forms import BlitzReviewSubmissionForm, ChapterLinkFormSet
 
 
 class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixin, FormView):
@@ -55,11 +55,11 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
             theme_bonus = True
 
 
-        long_chapters = []
+        long_chapters = set()
         for chapter in form.cleaned_data["chapter_links"]:
             if chapter.word_count >= blitz.scoring.long_chapter_bonus_words:
                 score += blitz.scoring.long_chapter_bonus
-                long_chapters.append(chapter)
+                long_chapters.add(chapter)
 
         blitzreview = BlitzReview.objects.create(
             blitz=blitz,
@@ -69,7 +69,6 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         )
 
         for chapter in long_chapters:
-            chapter.save()
             ReviewChapterLink.objects.create(
                 review=blitzreview,
                 chapter=chapter
@@ -86,6 +85,9 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         kwargs = super(BlitzReviewSubmissionFormView, self).get_form_kwargs()
         kwargs["user"] = self.request.user
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(blitz=ReviewBlitz.get_current(), **kwargs)
 
 
 class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):

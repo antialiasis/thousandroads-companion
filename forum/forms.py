@@ -42,6 +42,118 @@ class ForumLinkField(forms.CharField):
         return value.get_url()
 
 
+class IsPostLinkWidget(forms.CheckboxInput):
+    template_name = 'widgets/is_post_link.html'
+
+
+class ForumObjectWidget(forms.MultiWidget):
+    """
+    A widget for entering a link to a forum object.
+    ForumObjectField handles giving this the correct component
+    widgets, which are 1) something to select an object that exists in
+    the system, and 2) a text field into which a link can be entered.
+
+    """
+    template_name = 'widgets/forum_object.html'
+
+    def __init__(self, object_class, *args, **kwargs):
+        self.object_class = object_class
+        super(ForumObjectWidget, self).__init__(*args, **kwargs)
+
+    def decompress(self, value):
+        if value:
+            # Value should be a forum object of the correct type
+            if isinstance(value, self.object_class):
+                if value.pk is not None:
+                    # An existing object: select that fic/member in the first subwidget
+                    decompressed = [value.pk, '']
+                else:
+                    # A not-yet-existing object: put its link in the second widget
+                    decompressed = [None, value.link()]
+            else:
+                # value is probably a primary key
+                decompressed = [value, '']
+        else:
+            decompressed = [None, '']
+
+        if self.object_class == Fic:
+            # Add an appropriate value for the post link field.
+            decompressed.append(bool(isinstance(value, Fic) and value.post_id))
+        return decompressed
+
+
+class ForumObjectField(forms.MultiValueField):
+    """
+    A field for entering an object on the forum.
+
+    """
+    empty_values = [None, '', ('', ''), ('', '', False)]
+
+    def __init__(self, page_class, *args, **kwargs):
+        # Must pretend the field isn't required even if it is, so that
+        # MultiValueField's clean() won't stop us in our tracks later.
+        self.really_required = kwargs.pop('required', True)
+        self.object_class = page_class.object_class
+        fields = [
+            self.get_object_field(),
+            ForumLinkField(page_class)
+        ]
+        if self.object_class == Fic:
+            fields.append(forms.BooleanField(required=False, widget=IsPostLinkWidget()))
+        super(ForumObjectField, self).__init__(fields, *args, required=False, **kwargs)
+
+        self.widget = ForumObjectWidget(self.object_class, [field.widget for field in self.fields])
+
+    def get_object_field(self):
+        return forms.ModelChoiceField(queryset=self.object_class.objects.all(), widget=forms.HiddenInput)
+
+    def validate(self, value):
+        # Validate requiredness, since we bypass MultiValueField's
+        # normal requiredness validation.
+        if self.really_required and value is None:
+            raise ValidationError(self.error_messages['required'], code='required')
+
+    def compress(self, data_list):
+        if data_list:
+            if data_list[0]:
+                # We have an existing object selected
+                return data_list[0]
+            elif data_list[1]:
+                # Return the object of the page.
+                return data_list[1].object
+        return None
+
+    def prepare_value(self, value):
+        if isinstance(value, self.object_class):
+            return value.pk
+        return value
+
+    def clean(self, value):
+        if self.object_class == Fic and value[1] and not value[2]:
+            # We have a link, and we haven't checked the post link box - make
+            # sure the link is a thread link
+            try:
+                params = FicPage.get_params_from_url(value[1])
+            except ValueError:
+                raise ValidationError(u"Invalid Fic URL. Please enter the full URL to a thread or post on the %s forums." % settings.FORUM_NAME)
+            thread_id = params.get('thread_id')
+            if not thread_id:
+                # We don't actually have a thread ID
+                raise ValidationError(u"You have entered a link to a post with no thread ID, but not checked the single-post fic box. Please enter a thread link.")
+            # Set the link to the thread link instead of the post before we clean
+            value[1] = Fic(thread_id=thread_id).link()
+
+        # Just save during clean - nothing wrong with more forum objects
+        # in the database.
+        value = super(ForumObjectField, self).clean(value)
+
+        print("Cleaning forum object field value - %s" % value)
+
+        if value is not None:
+            value.save()
+        return value
+
+
 class CatalogSearchForm(forms.Form):
     query = forms.CharField(widget=forms.TextInput(attrs={'type': 'search', 'class': 'form-control'}))
 

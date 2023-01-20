@@ -673,7 +673,10 @@ class Chapter(models.Model):
         ordering = ('fic', 'posted_date')
 
     def __str__(self):
-        return "{}: {}".format(self.fic.title, self.threadmark_title) or "{}: post #{}".format(self.fic.title, self.post_id)
+        return "{}: {}".format(self.fic.title, self.threadmark_title) if self.threadmark_title else "{}: post #{}".format(self.fic.title, self.post_id)
+
+    def to_dict(self):
+        return {'type': 'chapter', 'pk': self.pk, 'name': str(self), 'object': {'threadmark_title': self.threadmark_title, 'word_count': self.word_count, 'link': self.link()}}
 
     def link(self):
         return f"https://{settings.FORUM_URL}posts/{self.post_id}/"

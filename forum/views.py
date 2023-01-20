@@ -259,17 +259,17 @@ class ForumObjectLookupView(JSONViewMixin, View):
         except ValidationError as e:
             context = {'error': e.message}
         else:
-            obj = page.object
-            if isinstance(obj, Fic):
-                other_objects = [author.to_dict() for author in obj.authors.all()]
-            else:
-                other_objects = []
+            if page is not None and page.object is not None:
+                obj = page.object
+                if isinstance(obj, Fic):
+                    other_objects = [author.to_dict() for author in obj.authors.all()]
+                else:
+                    other_objects = []
 
-            if obj is None:
-                context = {'error': u"Lookup failed. Please double-check that you entered a valid URL."}
-            else:
                 context = obj.to_dict()
                 context['other_objects'] = other_objects
+            else:
+                context = {'error': u"Lookup failed. Please double-check that you entered a valid URL."}
         return self.render_to_json_response(context)
 
 

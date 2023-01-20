@@ -34,7 +34,7 @@ input, select, textarea {
 }
 
 form input[type=text], form input[type=password] {
-    display:block;
+    display:inline-block;
     width:300px;
     max-width:100%;
 }
@@ -98,6 +98,14 @@ textarea.results-bbcode {
 
 .form-row {
     margin-bottom:5px;
+}
+
+.chapter-links .form {
+    margin-bottom:0;
+}
+
+.chapter-links .form label {
+    display:none;
 }
 
 .form-row.field-verify_current label {
@@ -212,6 +220,10 @@ blockquote.detail {
 
 .chapter-links {
     margin:0;
+}
+
+.remove-button {
+    cursor:pointer;
 }
 
 @media(min-width:767px) {

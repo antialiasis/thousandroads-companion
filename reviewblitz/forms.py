@@ -1,5 +1,7 @@
 from django import forms
+from django.forms.formsets import formset_factory
 from django.core.exceptions import ValidationError
+from forum.forms import ForumLinkField, ForumObjectField
 from forum.models import ReviewPage, ChapterPage
 from reviewblitz.models import BlitzReview, ReviewBlitz
 
@@ -17,6 +19,13 @@ class ReviewField(forms.Field):
         return review
 
 
+class ChapterLinkForm(forms.Form):
+    chapter = ForumObjectField(ChapterPage, label="Chapter link")
+
+
+ChapterLinkFormSet = formset_factory(ChapterLinkForm, extra=1)
+
+
 class BlitzReviewSubmissionForm(forms.Form):
     review = ReviewField(label="Review link", help_text="You can find this link by clicking the date near the top left corner of your review post on the Thousand Roads forums.")
     # Entering very large numbers of chapters causes an error to be thrown
@@ -25,14 +34,15 @@ class BlitzReviewSubmissionForm(forms.Form):
     # https://code.djangoproject.com/ticket/12030
     chapters = forms.IntegerField(min_value=1, max_value=1000, initial=1, help_text="The number of chapters covered by this review.")
     satisfies_theme = forms.BooleanField(label="Satisfies theme", required=False, help_text="Check this box if your review satisfied the active weekly Review Blitz theme at the time of its posting (see Review Blitz thread on the forums).")
-    chapter_links = forms.CharField(widget=forms.Textarea, required=False)
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super(BlitzReviewSubmissionForm, self).__init__(*args, **kwargs)
 
-        blitz = ReviewBlitz.get_current()
-        self.fields["chapter_links"].help_text = "If some of the chapters you read were {} words or more, enter their links here, one in each line, to receive a bonus of {} points per chapter.".format(blitz.scoring.long_chapter_bonus_words, blitz.scoring.long_chapter_bonus)
+        formset_prefix = "chapter_links"
+        if kwargs.get("prefix"):
+            formset_prefix = kwargs["prefix"] + "-" + formset_prefix
+        self.chapter_link_formset = ChapterLinkFormSet(prefix=formset_prefix, data=kwargs.get('data'))
 
     def clean_review(self):
         review = self.cleaned_data["review"]
@@ -55,35 +65,26 @@ class BlitzReviewSubmissionForm(forms.Form):
             raise ValidationError("This review was posted after the end of this Blitz!")
         return review
 
-    def clean_chapter_links(self):
-        links = self.cleaned_data["chapter_links"].strip()
-        if not links:
-            return []
-
-        chapter_links = links.split('\n')
-
-        chapters = []
-
-        for link in chapter_links:
-            link = link.strip()
-            if not link:
-                continue
-
-            try:
-                chapter = ChapterPage.from_url(link).object
-            except ValueError as e:
-                raise ValidationError("Invalid chapter URL!", code="invalid") from e
-
-            chapters.append(chapter)
-
-        return list(set(chapters))
-
     def clean(self):
         cleaned_data = super().clean()
 
-        if "chapter_links" in cleaned_data and "review" in cleaned_data:
-            for chapter in cleaned_data["chapter_links"]:
-                if chapter.fic != cleaned_data["review"].fic:
-                    raise ValidationError("This is not a chapter of the fic the review is on!", code="invalid")
+        self.chapter_link_formset.full_clean()
+
+        cleaned_data["chapter_links"] = []
+
+        if "review" in cleaned_data:
+            for form in self.chapter_link_formset:
+                if "chapter" in form.cleaned_data:
+                    chapter = form.cleaned_data["chapter"]
+                    if chapter:
+                        if chapter.fic != cleaned_data["review"].fic:
+                            form.add_error('chapter', "This is not a chapter of the fic the review is on!")
+                        else:
+                            cleaned_data["chapter_links"].append(chapter)
 
         return cleaned_data
+
+    def is_valid(self):
+        is_valid = super().is_valid()
+        formset_is_valid = self.chapter_link_formset.is_valid()
+        return is_valid and formset_is_valid

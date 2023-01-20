@@ -7,6 +7,90 @@
     <form action="{% url 'blitz_review_submit' %}" method="post">
         {% csrf_token %}
         {% include "form.html" %}
+        <div class="chapter-links">
+            <label for="{{form.chapter_link_formset.forms.0.0.id_for_label}}">Chapter links</label>
+            <span class="help-text">If some of the chapters you read were {{blitz.scoring.long_chapter_bonus_words}} words or more, enter their links below to receive a bonus of {{blitz.scoring.long_chapter_bonus}} points per chapter. (You will be able to enter more after inputting one.)</span>
+            {{form.chapter_link_formset.management_form}}
+            {% for form in form.chapter_link_formset.forms %}
+                {% include "form.html" %}
+            {% endfor %}
+        </div>
         <input type="submit" value="Submit" />
     </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    'use strict';
+
+    function lookup_chapter($elem, auto, params) {
+        if (!params) params = {};
+
+        if ($elem.is(":hidden")) {
+            return;
+        }
+
+        var $total_forms = $("input[name=chapter_links-TOTAL_FORMS");
+        $elem.next(".loading").remove();
+        
+        if ($elem.val() !== '') {
+            $elem.after(' <span class="loading"><img src="{{STATIC_URL}}ajax-loader.gif" alt=""> Looking up URL...</span>');
+            params.url = $.trim($elem.val());
+            $.get('/lookup/chapter', params, function(json) {
+                if ('error' in json) {
+                    $elem.next(".loading").text(json.error).addClass("text-danger");
+                }
+                else {
+                    $elem.siblings("input[type=hidden]").val(json.pk);
+                    $elem.hide();
+                    $elem.before('<span class="object-link"><a href="' + json.object.link + '" target="_blank">' + json.name + '</a> <b class="text-danger remove-button">&times;</b><span>');
+                    $elem.prev("span").children("b").click(function() {
+                        $elem.siblings(".loading, .object-link").remove();
+                        $elem.siblings("input[type=hidden]").val("");
+                        $elem.val("").show();
+                    });
+                    $elem.next(".loading").text("Lookup successful!").addClass("text-success");
+                    if (!auto) {
+                        $elem.closest(".form").find(".alert-danger").remove();
+                    }
+
+                    // Add a new form, if we don't have an empty one at the end
+                    var $last_form = $elem.closest(".form").parent().children(".form").last();
+                    if ($last_form.find("input[type=hidden]").val() || $last_form.find("input[type=text]").val()) {
+                        var $new_form = $last_form.clone();
+                        var replace_func = function(i, name) {
+                            return name.replace(/^(\w+)-(\d+)/, function(match, p1, p2) {
+                                return p1 + '-' + (p2 * 1 + 1);
+                            });
+                        };
+                        $new_form.find("input").val("").attr("name", replace_func).attr("id", replace_func);
+                        $new_form.find(".loading, .object-link, .alert-danger").remove();
+                        $new_form.find("input[type=text]").show();
+                        $last_form.after($new_form);
+                        $total_forms.val($total_forms.val() * 1 + 1);
+                    }
+                    setTimeout(function() { $elem.next(".loading").fadeOut(3000); }, 2000);
+                }
+            }).fail(function() {
+
+            });
+        } else {
+            $elem.siblings("input[type=hidden]").val("");
+        }
+    }
+
+    $(".chapter-links").on('blur', ".field-chapter input[type=text]", function() {
+        lookup_chapter($(this), false);
+    }).on('paste', ".field-chapter input[type=text]", function() {
+        var $self = $(this);
+        setTimeout(function() { lookup_chapter($self, false); }, 20);
+    });
+
+    // Load in previously submitted chapters immediately.
+    $(".field-chapter input[type=text]").each(function() {
+        if ($(this).val()) {
+            lookup_chapter($(this), true);
+        }
+    });
+</script>
 {% endblock %}
