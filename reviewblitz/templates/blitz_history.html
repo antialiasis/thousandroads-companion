@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load forum_utils %}
+{% block title %}Previous Blitzes{% endblock %}
+
+{% block content %}
+<h1>Previous Blitzes</h1>
+
+<p>Here, you can view statistics for previous {{forum_name}} Review Blitzes!</p>
+
+<ul>
+{% for blitz in blitzes %}
+<li><a href="{% url 'blitz' pk=blitz.pk %}">{{blitz.title}}</a></li>
+{% endfor %}
+</ul>
+{% endblock %}

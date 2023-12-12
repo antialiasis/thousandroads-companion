@@ -3,7 +3,7 @@ from django.db.models.functions import Least, Floor, Coalesce
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.views.generic import ListView, FormView, TemplateView
+from django.views.generic import ListView, FormView, TemplateView, DetailView
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -168,3 +168,39 @@ class BlitzUserView(LoginRequiredMixin, TemplateView):
         context['pending_reviews'] = pending_reviews
         context['pending_score'] = pending_reviews.aggregate(approved_score=Sum('score')).get('approved_score')
         return context
+
+
+class BlitzHistoryView(ListView):
+    template_name = "blitz_history.html"
+    context_object_name = "blitzes"
+
+    def get_queryset(self):
+        return ReviewBlitz.objects.exclude(pk=ReviewBlitz.get_current().pk)
+
+
+class BlitzView(DetailView):
+    model = ReviewBlitz
+    template_name = "blitz.html"
+    context_object_name = "blitz"
+
+    def get_context_data(self, **kwargs):
+        blitz = self.get_object()
+
+        if self.request.user.is_authenticated and self.request.user.member:
+            user, _ = BlitzUser.objects.get_or_create(blitz=blitz, member=self.request.user.member)
+
+            try:
+                queryset = BlitzReview.objects.filter(blitz=blitz, review__author=self.request.user.member.user_id, approved=True).order_by('-review__posted_date')
+            except AttributeError:
+                # User not verified
+                # Query fails because they don't have a user_id
+                queryset = BlitzReview.objects.none()
+        else:
+            queryset = BlitzReview.objects.none()
+
+        return super().get_context_data(
+            user_reviews=queryset,
+            leaderboard=BlitzReview.objects.filter(blitz=self.get_object(), approved=True).values('review__author').annotate(points=Sum('score') + Coalesce(Max('review__author__blitz_members__bonus_points'), 0), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points'),
+            **kwargs
+        )
+

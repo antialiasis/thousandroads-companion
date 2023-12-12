@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load forum_utils %}
+{% block title %}{{blitz.title}}{% endblock %}
+
+{% block content %}
+<h1>{{blitz.title}}</h1>
+
+<p>Ran from {{blitz.start_date}} to {{blitz.end_date}}.</p>
+
+{% if user.is_authenticated %}
+<h2>Your reviews</h2>
+
+{% if user_reviews %}
+<table class="table table-striped">
+<thead>
+<tr>
+<th>Story</th>
+<th>Chapters Covered</th>
+<th>Wordcount</th>
+<th>Theme</th>
+<th>Points</th>
+</tr>
+</thead>
+<tbody>
+{% for review in user_reviews %}
+<tr>
+<td><a href="{{review.review.link}}" target="_blank">{{review.review.fic.title}}</a></td>
+<td>{{review.review.chapters}}</td>
+<td>{{review.review.word_count}}</td>
+<td>{% if review.theme %}Yes{% else %}No{% endif %}</td>
+<td>{{review.score}}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p>You did not submit any reviews for this Blitz.</p>
+{% endif %}
+{% endif %}
+
+<h2>Leaderboard</h2>
+
+<table class="table table-striped">
+<thead>
+<tr>
+<th>Reviewer</th>
+<th>Points</th>
+<th>Reviews written</th>
+<th>Chapters reviewed</th>
+<th>Words written</th>
+</tr>
+</thead>
+<tbody>
+{% for entry in leaderboard %}
+<tr>
+<td>{{entry.username}}</td>
+<td>{{entry.points}}</td>
+<td>{{entry.reviews}}</td>
+<td>{{entry.chapters}}</td>
+<td>{{entry.words}}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endblock %}
