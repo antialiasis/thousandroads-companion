@@ -2,7 +2,6 @@
 import re
 import requests
 from datetime import datetime
-from dateutil import parser
 from pytz import timezone, utc
 from django.db import models
 from django.db.models import Q
@@ -10,6 +9,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.contrib.auth import logout
 from django.contrib.auth.models import AbstractUser
+from forum.api import get_user_info
 from bs4 import BeautifulSoup
 
 
@@ -61,6 +61,20 @@ class ForumPage(object):
         return cls.from_params(force_download=force_download, url=url, save=save, **params)
 
     @classmethod
+    def from_url_direct(cls, url):
+        """
+        Takes a URL to a forum type for this object type and returns a
+        corresponding page instance. The URL does not have to be the
+        forum defined in the settings.
+
+        """
+        params = cls.get_params_from_url(url, allow_offsite=True)
+        obj = cls.object_class(**params)
+        page = cls(obj, get_soup(url))
+        page.load_object(save=False, allow_offsite=True)
+        return page
+
+    @classmethod
     def from_params(cls, save=False, force_download=False, url=None, object_type=None, **kwargs):
         """
         Returns a page object corresponding to the given params.
@@ -86,13 +100,14 @@ class ForumPage(object):
         return page
 
     @classmethod
-    def get_params_from_url(cls, url):
+    def get_params_from_url(cls, url, allow_offsite=False):
         """
         Extracts relevant parameters from a forum URL.
 
         """
+        base_url = ".+" if allow_offsite else re.escape(settings.FORUM_URL)
         for regex in cls.object_id_regexen:
-            url_regex = re.compile(r'^(?:https?://(?:www\.)?%s|/(?:index\.php\?)?)?%s' % (re.escape(settings.FORUM_URL), regex), re.U)
+            url_regex = re.compile(r'^(?:https?://(?:www\.)?%s|/(?:index\.php\?)?)?%s' % (base_url, regex), re.U)
             match = url_regex.match(url)
             if match and match.group(1):  # The URL is invalid if the object ID match is zero-length
                 return match.groupdict()
@@ -223,12 +238,14 @@ class MemberPage(ForumPage):
         soup = self.get_soup()
         # First check whether we're able to see the page at all
         if soup.find('div', class_=u'blockMessage--error', string=re.compile('You must be logged-in')):
-            raise ValidationError(u"Could not access profile page. Refer to the validation instructions and make your profile visible to all visitors. If you have already done so, please contact Dragonfree on the forums with your username so that you can be manually verified.")
+            raise ValidationError(u"Could not access profile page. Refer to the validation instructions and make your profile visible to all visitors. If you have already done so, please contact %s staff with your username so that you can be manually verified." % settings.FORUM_NAME)
 
         try:
             bio = soup.find('div', class_='p-body-pageContent').find(class_='block-row').find(class_='bbWrapper')
         except AttributeError:
-            raise ValidationError(u"Could not find About field on profile page. If you submitted a valid profile link, please contact Dragonfree on the forums with your username so that you can be manually verified.")
+            raise ValidationError(u"Could not find About field on profile page. If you submitted a valid profile link, please contact %s staff with your username so that you can be manually verified." % settings.FORUM_NAME)
+        if not bio:
+            raise ValidationError("Could not find validation code on profile! Did you enter your verification code into the About You field?")
         return str(bio.get_text())
 
     def load_object(self, save=True, object_type=None):
@@ -262,8 +279,13 @@ class User(AbstractUser):
     verification_code = models.CharField(max_length=10, default=get_verification_code)
 
     def validate_verification_code(self, page):
-        if self.verification_code not in page.get_bio():
-            raise ValidationError(u"Your verification code was not found in your profile's About section. Please ensure you followed the instructions correctly. If the problem persists, please contact an admin on the forums to be manually verified.")
+        username, verification_code = get_user_info(page.object.user_id)
+
+        if verification_code is None:
+            raise ValidationError("Could not fetch verification code from your profile! Please contact %s staff for assistance." % settings.FORUM_NAME)
+
+        if self.verification_code != verification_code.strip():
+            raise ValidationError("Verification code incorrect. Please double-check that you followed the instructions correctly! If the problem persists, please contact %s to be manually verified." % settings.FORUM_NAME)
         # Ensure each verification can be used only once
         self.verification_code = get_verification_code()
         self.save()
@@ -370,7 +392,72 @@ class Fic(ForumObject, models.Model):
                     FicTag.objects.create(fic=self, tag=tag)
 
 
-class FicPage(ForumPage):
+class ThreadIterator:
+    page = None
+    page_posts = None
+    index = None
+
+    def __init__(self, page, post_id):
+        self.page = page
+        self.page_posts = page.get_page_posts()
+        for i, post in enumerate(self.page_posts):
+            if post.post_id == post_id:
+                self.index = i
+                break
+        else:
+            self.index = 0
+
+    def __next__(self):
+        if self.index >= len(self.page_posts):
+            if not self.page.has_next_page():
+                raise StopIteration
+
+            self.page = self.page.get_next_page()
+            self.page_posts = self.page.get_page_posts()
+            if len(self.page_posts) == 0:
+                raise StopIteration
+            self.index = 0
+        post = self.page_posts[self.index]
+        self.index += 1
+        return post
+
+
+class Thread:
+    thread_id = None
+    post_id = None
+    title = None
+    posted_date = None
+    _authors = []
+
+    def __init__(self, thread_id=None, post_id=None):
+        self.thread_id = thread_id
+        self.post_id = post_id
+
+    def get_authors(self):
+        return self._authors
+
+    def link(self):
+        if self.post_id:
+            urlbit = u"posts/%s" % self.post_id
+        else:
+            urlbit = u"threads/%s" % self.thread_id
+        return u"https://%s%s/" % (settings.FORUM_URL, urlbit)
+
+    def link_html(self):
+        return u'<a href="%s" target="_blank">%s</a> by %s' % (self.link(), self.title, pretty_join([author.link_html() for author in self._authors]))
+
+    def link_bbcode(self):
+        return u'[url=%(link)s]%(title)s[/url] by %(authors)s' % {'link': self.link(), 'id': self.post_id or self.thread_id, 'title': self.title, 'authors': pretty_join([author.link_bbcode() for author in self._authors])}
+
+    @classmethod
+    def get_page_class(self):
+        return ThreadPage
+
+    def save(self, commit=True):
+        return
+
+
+class ThreadPage(ForumPage):
     # Matches URL queries for threads/posts including
     # - threads/<threadid>/
     # - threads/<threadid>/unread
@@ -384,9 +471,22 @@ class FicPage(ForumPage):
         r'threads/(?:[^&.]*\.)?(?P<thread_id>\d+)(?:/page-\d+|/unread)?/?(?:#?post-(?P<post_id>\d+))?',
         r'posts/(?P<post_id>\d+)'
     ]
-    object_class = Fic
+
+    object_class = Thread
 
     _pagination = None
+
+    def __iter__(self):
+        return ThreadIterator(self, self.object.post_id)
+
+    def get_page_class(self):
+        return ThreadPage
+
+    def get_forum_link(self):
+        return self.get_soup().find(class_="p-breadcrumbs").find_all('li')[-1].a['href']
+
+    def is_fic(self):
+        return self.get_forum_link() in settings.VALID_FIC_FORUMS
 
     def get_pagination(self):
         if not self._pagination:
@@ -395,7 +495,7 @@ class FicPage(ForumPage):
         return self._pagination
 
     def get_page(self, page_link):
-        page = FicPage.from_url(u"https://{}{}".format(settings.FORUM_URL.rsplit('/', 1)[0], page_link['href']), force_download=True)
+        page = self.get_page_class().from_url(u"https://{}{}".format(settings.FORUM_URL.rsplit('/', 1)[0], page_link['href']), force_download=True)
         # Override the object (but not the soup)
         page.object = self.object
         return page
@@ -434,7 +534,7 @@ class FicPage(ForumPage):
         pagination = self.get_pagination()
         if pagination is None:
             return 1
-        pagelink = pagination.find('a', class_="currentPage")
+        pagelink = pagination.find('li', class_="pageNav-page--current").a
         if pagelink:
             return int(pagelink.get_text(strip=True))
         else:
@@ -464,15 +564,18 @@ class FicPage(ForumPage):
         if self.object.post_id:
             return Post(self, self.get_soup().find(id="js-post-%s" % self.object.post_id))
         else:
-            return Post(self, self.get_soup().find(class_="block--messages").article)
+            return Post(self, self.get_soup().find(class_="block--messages").find('article'))
 
     def get_page_posts(self):
         soup = self.get_soup()
-        return [Post(self, post) for post in soup.find(class_="block--messages").find_all('article', class_="message--post")]
+        return [Post(self, post, post_index=i) for i, post in enumerate(soup.find(class_="block--messages").find_all('article', class_="message--post"))]
 
-    def is_fic(self):
-        forum_link = self.get_soup().find(class_="p-breadcrumbs").find_all('li')[-1].a
-        return forum_link['href'] in settings.VALID_FIC_FORUMS
+    def get_title(self):
+        return self.get_soup().find('h1', class_="p-title-value").find(text=True, recursive=False)
+
+    def get_prefix(self):
+        prefix_label = self.get_soup().find('h1', class_="p-title-value").find(class_="label")
+        return prefix_label.get_text() if prefix_label else ''
 
     def load_object(self, save=True, object_type=None):
         if self.object.thread_id is None and self.object.post_id is None:
@@ -480,14 +583,11 @@ class FicPage(ForumPage):
 
         soup = self.get_soup()
 
-        if not self.is_fic():
-            raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the fanfic forum). Please enter the link to a valid fanfic." % self.object.link())
-
-        thread_title = soup.find('h1', class_="p-title-value").find(text=True, recursive=False)
+        thread_title = self.get_title()
 
         if self.object.thread_id is None:
             thread_link = soup.find(class_="message-attribution-main").a
-            self.object.thread_id = FicPage.get_params_from_url(thread_link['href'])['thread_id']
+            self.object.thread_id = self.__class__.get_params_from_url(thread_link['href'])['thread_id']
 
         if object_type != 'post':
             self.object.post_id = None
@@ -501,14 +601,14 @@ class FicPage(ForumPage):
             if save:
                 # We really want to load this object. Fetch it again altogether
                 # (from params).
-                self.object = FicPage.from_params(save=True, thread_id=self.object.thread_id, post_id=self.object.post_id, object_type=object_type).object
+                self.object = self.__class__.from_params(save=True, thread_id=self.object.thread_id, post_id=self.object.post_id, object_type=object_type).object
             return self.object
 
         if self.object.post_id is not None:
-            # The fic starts in a particular post - use a placeholder title
+            # We're looking at a particular post - use a placeholder title
             title = u"%s - post %s" % (thread_title, self.object.post_id)
         else:
-            # The fic is a thread - just use the thread title as is
+            # This is a thread - just use the thread title as is
             title = thread_title
 
         self.object.title = title
@@ -518,6 +618,19 @@ class FicPage(ForumPage):
         if save:
             self.object.save()
         return self.object
+
+
+class FicPage(ThreadPage):
+    object_class = Fic
+
+    def get_page_class(self):
+        return FicPage
+
+    def load_object(self, save=True, object_type=None):
+        if not self.is_fic():
+            raise ValidationError(u"This thread (%s) does not seem to be a fanfic (it is not located in the fanfic forum). Please enter the link to a valid fanfic." % self.object.link())
+
+        return super().load_object(save, object_type)
 
 
 class FicTag(models.Model):
@@ -531,9 +644,11 @@ class FicTag(models.Model):
 
 
 class Post(object):
-    def __init__(self, page, post_soup):
+    def __init__(self, page, post_soup, post_index=None):
         self.page = page
         self._soup = post_soup
+        self._body_text = None
+        self.post_index = post_index
 
     def __str__(self):
         return u'Post #{} by {} in {} (posted {})'.format(self.post_id, self.author, self.page.object, self.posted_date)
@@ -553,10 +668,13 @@ class Post(object):
 
     @property
     def body_text(self):
+        if self._body_text is not None:
+            return self._body_text
         post_body = self._soup.find(class_="message-body")
         for blockquote in post_body.find_all("blockquote"):
             blockquote.decompose()
-        return post_body.get_text()
+        self._body_text = post_body.get_text()
+        return self._body_text
 
     @property
     def word_count(self):
@@ -586,7 +704,7 @@ class Post(object):
         return threadmark_elem.get_text() if threadmark_elem else ""
 
 
-class PostPage(FicPage):
+class PostPage(ThreadPage):
     object_id_regexen = (
         r'threads/(?:[^&.]*\.)?(?:\d+)(?:/page-\d+|/unread)?/?(?:#?post-(?P<post_id>\d+))',
         r'posts/(?P<post_id>\d+)'
@@ -596,11 +714,8 @@ class PostPage(FicPage):
     def from_params(cls, save=False, force_download=False, url=None, object_type=None, **kwargs):
         return super().from_params(save, force_download, url, 'post', **kwargs)
 
-    def load_object(self, save=True, object_type=None):
+    def load_object(self, save=True, object_type=None, allow_offsite=False):
         soup = self.get_soup()
-
-        if not self.is_fic():
-            raise ValidationError(u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid post." % self.object.link())
 
         post = self.get_post()
         self.object.author = post.author
@@ -609,10 +724,9 @@ class PostPage(FicPage):
         if hasattr(self.object, 'threadmark_title'):
             self.object.threadmark_title = post.threadmark_title
 
-        thread_params = FicPage.get_params_from_url(soup.find(class_="message-attribution-main").a["href"])
-        self.object.fic = FicPage.from_params(thread_id=thread_params["thread_id"], save=True).object
+        thread_link = soup.find(class_="message-attribution-main").a
+        self.object.thread_id = ThreadPage.get_params_from_url(thread_link['href'])['thread_id']
 
-        self.object.chapters = 1
         if save:
             self.object.save()
 
@@ -650,8 +764,15 @@ class Review(ForumObject, models.Model):
 class ReviewPage(PostPage):
     object_class = Review
 
-    def load_object(self, save=True, object_type=None):
-        self.object = super(ReviewPage, self).load_object(save=False)
+    def load_object(self, save=True, object_type=None, allow_offsite=False):
+        if not allow_offsite and not self.is_fic():
+            raise ValidationError(u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid post." % self.object.link())
+
+        self.object = super(ReviewPage, self).load_object(save=False, allow_offsite=allow_offsite)
+
+        if not allow_offsite:
+            thread_params = ThreadPage.get_params_from_url(self.get_soup().find(class_="message-attribution-main").a["href"])
+            self.object.fic = FicPage.from_params(thread_id=thread_params["thread_id"], save=True).object
 
         self.object.chapters = 1
         if save:
@@ -696,10 +817,16 @@ class ChapterPage(PostPage):
     object_class = Chapter
 
     def load_object(self, save=True, object_type=None):
+        if not self.is_fic():
+            raise ValidationError(u"This post (%s) does not seem to be in a valid fanfic (it is not located in the fanfic forum). Please enter the link to a valid post." % self.object.link())
+
         self.object = super(ChapterPage, self).load_object(save=False)
 
+        thread_params = ThreadPage.get_params_from_url(self.get_soup().find(class_="message-attribution-main").a["href"])
+        self.object.fic = FicPage.from_params(thread_id=thread_params["thread_id"], save=True).object
+
         if self.object.author not in self.object.fic.get_authors():
-            raise ValidationError(u"This post (%s) does not seem to be by an author of the thread it is in. If this is in error, please contact Thousand Roads staff." % self.object.link())
+            raise ValidationError(u"This post (%s) does not seem to be by an author of the thread it is in. If this is in error, please contact %s staff." % (self.object.link(), settings.FORUM_NAME))
 
         if save:
             self.object.save()

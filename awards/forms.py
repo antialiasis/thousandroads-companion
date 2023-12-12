@@ -8,7 +8,24 @@ from django.forms.models import ModelChoiceIterator
 from django.utils.html import mark_safe
 from awards.models import Award, YearAward, Nomination, Vote, Phase, CURRENT_YEAR, check_eligible
 from forum.models import Member, MemberPage, Fic, FicPage
-from forum.forms import ForumLinkField, ForumObjectField
+from forum.forms import ForumLinkField, ForumObjectField, VerificationForm
+
+
+class AwardsVerificationForm(VerificationForm):
+    verify_current = forms.BooleanField(required=False, label=u"Verify existing nominations/votes?", help_text=mark_safe(u"This member has already submitted unverified nominations/votes. To verify them now, check this box. <strong>Do not check this box unless you are certain that you submitted these nominations/votes!</strong> You can verify them later by resubmitting them."))
+
+    def __init__(self, *args, **kwargs):
+        self.made_unverified = kwargs.pop('has_unverified', False)
+        super().__init__(*args, **kwargs)
+        if user.member:
+            if not self.made_unverified:
+                phase = Phase.get_current()
+                if phase == 'nomination':
+                    has_unverified = user.member.nominations_by.from_year().filter(verified=False).exists()
+                elif phase == 'voting':
+                    has_unverified = user.member.votes.from_year().filter(verified=False).exists()
+        if not self.made_unverified:
+            del self.fields['verify_current']
 
 
 class YearAwardForm(forms.Form):

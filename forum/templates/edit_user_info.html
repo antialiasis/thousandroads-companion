@@ -6,7 +6,7 @@
 {% block content %}
 <h1>Edit User Info</h1>
 
-<p>Your current site username is <strong>{{user.username}}</strong>.{% if user.member %} You have connected the {{forum_name}} account {{user.member.link_html|safe}}{% if not user.verified %}, but <strong>you have not yet been <a href="{% url 'verification' %}">verified</a></strong>. Your nominations and votes will <strong>not</strong> be counted until you have been verified{% endif %}.{% else %} You have not yet connected a {{forum_name}} account. You can do so <a href="{% url 'verification' %}">here</a>.{% endif %}</p>
+<p>Your current site username is <strong>{{user.username}}</strong>.{% if user.member %} You have connected the {{forum_name}} account {{user.member.link_html|safe}}{% if not user.verified %}, but <strong>you have not yet been <a href="{% url 'verification' %}">verified</a></strong>{% endif %}.{% else %} You have not yet connected a {{forum_name}} account. You can do so <a href="{% url 'verification' %}">here</a>.{% endif %}</p>
 
 <form action="" method="post">
 {% csrf_token %}

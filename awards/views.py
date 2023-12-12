@@ -11,11 +11,11 @@ from django.utils.safestring import mark_safe
 from django.contrib import messages
 from django.contrib.auth import login
 from extra_views.formsets import FormSetView
-from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm
+from awards.forms import YearAwardForm, BaseYearAwardFormSet, NominationForm, BaseNominationFormSet, VotingForm, AwardsVerificationForm
 from awards.models import YearAward, Nomination, Phase, PageView, check_eligible, verify_current
 from forum.models import Member, MemberPage, Fic
 from forum.forms import TempUserProfileForm
-from forum.views import LoginRequiredMixin, ForumObjectLookupView
+from forum.views import LoginRequiredMixin, ForumObjectLookupView, VerificationView
 from math import ceil
 
 
@@ -323,3 +323,23 @@ class PastAwardsView(ListView):
 
     def get_queryset(self):
         return YearAward.objects.values_list('year', flat=True).order_by('year').distinct()
+
+
+class AwardsVerificationView(VerificationView):
+    form_class = AwardsVerificationForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        phase = Phase.get_current()
+        if phase == 'nomination':
+            kwargs['has_unverified'] = self.request.session.get('unverified_nominations_%s' % CURRENT_YEAR, False)
+        elif phase == 'voting':
+            kwargs['has_unverified'] = self.request.session.get('unverified_votes_%s' % CURRENT_YEAR, False)
+        else:
+            kwargs['has_unverified'] = False
+        return kwargs
+
+    def form_valid(self, form):
+        if form.made_unverified or form.cleaned_data.get('verify_current'):
+            verify_current(form.member)
+        return super().form_valid(form)

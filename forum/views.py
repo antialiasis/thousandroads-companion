@@ -15,7 +15,6 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from awards.models import verify_current, Phase, CURRENT_YEAR
 from forum.models import User, Member, Fic, Genre
 from forum.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm, CatalogSearchForm, CatalogFicForm
 
@@ -175,22 +174,13 @@ class VerificationView(LoginRequiredMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super(VerificationView, self).get_form_kwargs()
         kwargs['user'] = self.request.user
-        phase = Phase.get_current()
-        if phase == 'nomination':
-            kwargs['has_unverified'] = self.request.session.get('unverified_nominations_%s' % CURRENT_YEAR, False)
-        elif phase == 'voting':
-            kwargs['has_unverified'] = self.request.session.get('unverified_votes_%s' % CURRENT_YEAR, False)
-        else:
-            kwargs['has_unverified'] = False
         return kwargs
 
     def form_valid(self, form):
         self.request.user.member = form.member
         self.request.user.verified = True
         self.request.user.save()
-        if form.made_unverified or form.cleaned_data.get('verify_current'):
-            verify_current(form.member)
-        messages.success(self.request, u"You have been successfully verified as %s! You can change your Biography profile field on the forums back now, if you like." % form.member)
+        messages.success(self.request, u"You have been successfully verified as %s!" % form.member)
         return super(VerificationView, self).form_valid(form)
 
 
@@ -229,7 +219,7 @@ class PasswordResetView(SingleObjectMixin, FormView):
 
     def form_valid(self, form):
         user = form.save()
-        messages.success(self.request, u"Your password has been successfully reset! You can change your About you profile field on the forums back now, if you like.")
+        messages.success(self.request, u"Your password has been successfully reset! You have now been logged in.")
         response = super(PasswordResetView, self).form_valid(form)
         user = authenticate(username=user.username, password=form.cleaned_data['password1'])
         login(self.request, user)
