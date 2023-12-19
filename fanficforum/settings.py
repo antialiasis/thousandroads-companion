@@ -72,6 +72,8 @@ LOGIN_REDIRECT_URL = 'home'
 
 LOGIN_URL = 'login'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 FORUM_NAME = os.environ.get('FORUM_NAME')
 FORUM_URL = os.environ.get('FORUM_URL')
 fic_forums = os.environ.get('VALID_FIC_FORUMS')

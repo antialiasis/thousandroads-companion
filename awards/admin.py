@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.conf.urls import url
+from django.urls import re_path
 from awards.models import Category, Award, YearAward, Nomination, FicEligibility
 from awards.views import YearAwardsMassEditView
 
@@ -18,7 +18,7 @@ class YearAwardsAdmin(admin.ModelAdmin):
         urls = super(YearAwardsAdmin, self).get_urls()
 
         return [
-            url(r'^set_year_awards/(?:(?P<year>\d+)/)?$', self.admin_site.admin_view(YearAwardsMassEditView.as_view(extra_context={'current_app': self.admin_site.name})), name='set_year_awards')
+            re_path(r'^set_year_awards/(?:(?P<year>\d+)/)?$', self.admin_site.admin_view(YearAwardsMassEditView.as_view(extra_context={'current_app': self.admin_site.name})), name='set_year_awards')
         ] + urls
 
 

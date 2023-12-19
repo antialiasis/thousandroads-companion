@@ -1,12 +1,11 @@
 # -*- coding: utf8 -*-
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import total_ordering
 from django.db import models
 from django.db.models import Q, Count, Prefetch
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils import timezone
 from forum.models import Member, Fic, User
 from forum.utils import bbcode_to_html
 

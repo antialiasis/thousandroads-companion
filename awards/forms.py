@@ -139,10 +139,7 @@ class NominationObjectIterator(ModelChoiceIterator):
 
 
 class NominationObjectChoiceField(forms.ModelChoiceField):
-    def _get_choices(self):
-        return NominationObjectIterator(self)
-
-    choices = property(_get_choices, forms.ChoiceField._set_choices)
+    iterator = NominationObjectIterator
 
 
 class NominationObjectField(ForumObjectField):
