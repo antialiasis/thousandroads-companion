@@ -40,8 +40,20 @@ class MemberAdmin(admin.ModelAdmin):
             old_instance.delete()
 
 
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ['author', 'fic', 'posted_date', 'word_count', 'chapters', 'edit']
+    list_display_links = ['edit']
+    list_select_related = ['author', 'fic']
+    fields = ['post_id', 'author', 'fic', 'posted_date', 'word_count', 'chapters']
+    readonly_fields = ['post_id']
+
+    @admin.display(description="Edit")
+    def edit(self, obj):
+        return "Edit"
+
+
 admin.site.register(User, ForumUserAdmin)
 admin.site.register(Member, MemberAdmin)
 admin.site.register(Fic)
 admin.site.register(Genre)
-admin.site.register(Review)
+admin.site.register(Review, ReviewAdmin)

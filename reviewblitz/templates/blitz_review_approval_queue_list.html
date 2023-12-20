@@ -26,8 +26,14 @@
                 {% endif %}
                 <dt>Word count</dt>
                     <dd>{{ review.review.word_count }}</dd>
+                {% with review.get_theme as theme %}
+                <dt>Week</dt>
+                    <dd>{{review.week_index}}{% if theme %} - {{theme.name}}{% endif %}</dd>
+                {% if theme %}
                 <dt>Satisfies theme</dt>
                     <dd><input type="checkbox" name="theme" value="1"{% if review.theme %} checked{% endif %}></dd>
+                {% endif %}
+                {% endwith %}
                 <dt>Score</dt>
                     <dd>{{ review.score|floatformat:2 }}</dd>
             </dl>

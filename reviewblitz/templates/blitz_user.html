@@ -15,12 +15,13 @@
 {% if pending_reviews %}
 <h2>Pending Reviews</h2>
 
-<table class="table table-striped">
+<table class="table table-striped blitz-stats-table">
 <thead>
 <tr>
 <th>Story</th>
 <th>Chapters Covered</th>
 <th>Wordcount</th>
+<th>Week</th>
 <th>Theme</th>
 <th>Points</th>
 </tr>
@@ -28,9 +29,10 @@
 <tbody>
 {% for review in pending_reviews %}
 <tr>
-<td>{{review.review__fic__title}}</td>
-<td>{{review.review__chapters}}</td>
-<td>{{review.review__word_count}}</td>
+<td><a href="{{review.review.link}}" target="_blank">{{review.review.fic.title}}</a></td>
+<td>{{review.review.chapters}}</td>
+<td>{{review.review.word_count}}</td>
+<td>{{review.week_index}}{% with review.get_theme as theme %}{% if theme %} - {{review.get_theme}}{% endif %}{% endwith %}</td>
 <td>{% if review.theme %}Yes{% else %}No{% endif %}</td>
 <td>{{review.score}}</td>
 </tr>
@@ -42,12 +44,13 @@
 <h2>Approved Reviews</h2>
 
 {% if approved_reviews %}
-<table class="table table-striped">
+<table class="table table-striped blitz-stats-table">
 <thead>
 <tr>
 <th>Story</th>
 <th>Chapters Covered</th>
 <th>Wordcount</th>
+<th>Week</th>
 <th>Theme</th>
 <th>Points</th>
 </tr>
@@ -55,9 +58,10 @@
 <tbody>
 {% for review in approved_reviews %}
 <tr>
-<td>{{review.review__fic__title}}</td>
-<td>{{review.review__chapters}}</td>
-<td>{{review.review__word_count}}</td>
+<td><a href="{{review.review.link}}" target="_blank">{{review.review.fic.title}}</a></td>
+<td>{{review.review.chapters}}</td>
+<td>{{review.review.word_count}}</td>
+<td>{{review.week_index}}{% with review.get_theme as theme %}{% if theme %} - {{review.get_theme}}{% endif %}{% endwith %}</td>
 <td>{% if review.theme %}Yes{% else %}No{% endif %}</td>
 <td>{{review.score}}</td>
 </tr>
