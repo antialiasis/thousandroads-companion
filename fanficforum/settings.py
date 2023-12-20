@@ -26,8 +26,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    # 'awards',
     'forum',
-    'awards',
     'reviewblitz'
 )
 
@@ -56,7 +56,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'forum.context_processors.forum_identity',
                 'forum.context_processors.enabled_apps',
-                'awards.views.awards_context',
+                # 'awards.views.awards_context',
             ],
         },
     },

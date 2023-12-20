@@ -6,6 +6,8 @@ from django.db.models import Q, Count, Prefetch
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.dispatch import receiver
+from forum.admin import member_manually_verified, member_user_id_updated
 from forum.models import Member, Fic, User
 from forum.utils import bbcode_to_html
 
@@ -155,6 +157,18 @@ def check_eligible(page):
         # We don't know if this user is actually allowed to nominate this
         # But it is eligible! Save it so it gets added to the list of eligible fics
         fic.save()
+
+
+@receiver(member_user_id_updated)
+def update_nominations_votes_on_user_id_updated(sender, instance, old_instance, **kwargs):
+    old_instance.nominations.update(nominee_id=instance)
+    old_instance.nominations_by.update(member_id=instance)
+    old_instance.votes.update(member=instance)
+
+
+@receiver(member_manually_verified)
+def verify_current_on_manual_verify(sender, instance, **kwargs):
+    verify_current(instance)
 
 
 def verify_current(member):

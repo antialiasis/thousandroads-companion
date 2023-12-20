@@ -1,8 +1,11 @@
 from django.utils.translation import gettext_lazy as _
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.dispatch import Signal
 from forum.models import User, Member, Fic, Genre, Review
-from awards.models import verify_current
+
+member_manually_verified = Signal()
+member_user_id_updated = Signal()
 
 
 class ForumUserAdmin(UserAdmin):
@@ -18,8 +21,7 @@ class ForumUserAdmin(UserAdmin):
 
     def save_model(self, request, obj, form, change):
         if change and obj.verified and 'verified' in form.changed_data:
-            # We've verified the user - verify their current nominations/votes
-            verify_current(obj.member)
+            member_manually_verified.send(sender=self.__class__, instance=obj.member)
         super(ForumUserAdmin, self).save_model(request, obj, form, change)
 
 
@@ -34,9 +36,7 @@ class MemberAdmin(admin.ModelAdmin):
         print(obj.user_id, form.instance.user_id, self.old_member_id)
         if change and 'user_id' in form.changed_data:
             old_instance = Member.objects.get(user_id=self.old_member_id)
-            old_instance.nominations.update(nominee_id=obj)
-            old_instance.nominations_by.update(member_id=obj)
-            old_instance.votes.update(member=obj)
+            member_user_id_updated.send(sender=self.__class__, instance=obj, old_instance=old_instance)
             old_instance.delete()
 
 
