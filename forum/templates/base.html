@@ -16,6 +16,11 @@
     height:auto;
 }
 
+.navbar-nav > li > form {
+    padding:7px 15px;
+    text-align:center;
+}
+
 h1 {
     padding-bottom:5px;
     border-bottom:1px solid #DDD;
@@ -343,7 +348,7 @@ blockquote.detail {
                         {% if not user.verified %}
                     <li{% block active_verification %}{% endblock %}><a href="{% url 'verification' %}">Verify user</a></li>
                         {% endif %}
-                    <li><a href="{% url 'logout' %}">Log out</a></li>
+                    <li><form class="form-inline" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="btn btn-default">Log out</button></form></li>
                     {% else %}
                     <li{% block active_login %}{% endblock %}><a href="{% url 'login' %}">Log in</a></li>
                     <li{% block active_register %}{% endblock %}><a href="{% url 'register' %}">Register</a></li>
