@@ -9,23 +9,28 @@ class WeeklyTheme(models.Model):
     name = models.CharField(max_length=50, help_text="A name for this theme, such as 'One-Shot Week'.")
     description = models.TextField(help_text="A basic description of this theme.")
     notes = models.TextField(help_text="A more detailed explanation of what qualifies for this theme.")
-    claimable = models.CharField(max_length=11, choices=(('per_chapter', 'Per chapter'), ('per_review', 'Per review'), ('per_fic', 'Per fic')), default='per_fic')
+    claimable = models.CharField(max_length=11, choices=(('per_chapter', 'Per chapter'), ('per_review', 'Per review'), ('per_fic', 'Per fic')), default='per_fic', help_text="Per chapter means the bonus can be claimed once per chapter covered by a review. Per review means it can be claimed only once per review, though it could be claimed multiple times per fic in separate reviews. Per fic means it can be claimed once per fic for this week.")
+    subsequent_chapter_theme_bonus = models.BooleanField(default=False, help_text="Check this box to automatically apply the theme bonus to all chapters after the first in multi-chapter reviews (only relevant if the theme is claimable per chapter). This would be appropriate if the theme is something like 'Any chapterfic' or 'Any story you've already reviewed before'. If not checked for a per-chapter theme, the theme bonus will be applied for all the chapters if the box is checked or no chapters otherwise.")
     consecutive_chapter_bonus_applies = models.BooleanField(default=True, help_text="Whether or not the repeat bonus for consecutive chapters, if any, applies when this theme is active.")
 
     def __str__(self):
         return self.name
 
-    def claimable_theme_bonuses(self, review, prev_reviews):
+    def claimable_theme_bonuses(self, theme_box_checked, review, prev_reviews):
         if self.claimable == 'per_chapter':
-            # We can always claim theme bonus for the number of chapters this review covers
-            return review.effective_chapters_reviewed()
+            # If this theme automatically applies theme bonus to subsequent chapters,
+            # then we want the theme box to determine whether we get a bonus for the
+            # first chapter while always giving a bonus for the rest.
+            # Otherwise, we get a bonus for every chapter reviewed if the box is checked.
+            chapters = review.effective_chapters_reviewed()
+            return theme_box_checked + chapters - 1 if self.subsequent_chapter_theme_bonus else chapters * theme_box_checked
         if self.claimable == 'per_review':
-            # We can always claim theme bonus once
-            return 1
+            # We can always claim theme bonus once.
+            return 1 * theme_box_checked
         if self.claimable == 'per_fic':
-            # We can claim the theme bonus once if we have not claimed the theme bonus for a review of this fic this week
+            # We can claim the theme bonus once if we have not claimed the theme bonus for a review of this fic this week.
             week_index = review.week_index()
-            return 0 if any(r.week_index() == week_index and r.theme for r in prev_reviews) else 1
+            return 0 if any(r.week_index() == week_index and r.theme for r in prev_reviews) else 1 * theme_box_checked
         return 0
 
 

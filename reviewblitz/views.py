@@ -48,8 +48,8 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
 
         theme_bonuses_applied = 0
 
-        if form.cleaned_data["satisfies_theme"] and weekly_theme:
-            theme_bonuses_applied = weekly_theme.claimable_theme_bonuses(blitzreview, prev_reviews)
+        if weekly_theme:
+            theme_bonuses_applied = weekly_theme.claimable_theme_bonuses(form.cleaned_data["satisfies_theme"], blitzreview, prev_reviews)
             if theme_bonuses_applied:
                 print(f"Claiming weekly theme {theme_bonuses_applied}x - +{blitz.scoring.theme_bonus * theme_bonuses_applied} points!")
                 score += blitz.scoring.theme_bonus * theme_bonuses_applied
