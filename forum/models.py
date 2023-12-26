@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
-from datetime import datetime
-from pytz import timezone, utc
+from datetime import datetime, timezone
 from django.db import models
 from django.db.models import Q
 from django.conf import settings
@@ -664,7 +663,7 @@ class Post(object):
     def posted_date(self):
         date_elem = self._soup.find(class_="message-attribution-main").time
 
-        return datetime.fromtimestamp(int(date_elem['data-time']), utc)
+        return datetime.fromtimestamp(int(date_elem['data-time']), timezone.utc)
 
     @property
     def body_text(self):
