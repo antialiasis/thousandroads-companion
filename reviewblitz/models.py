@@ -65,7 +65,10 @@ class ReviewBlitz(models.Model):
 
     @classmethod
     def get_current(cls):
-        return cls.objects.filter(start_date__lte=timezone.now(), end_date__gt=timezone.now()).latest("start_date")
+        return cls.objects.latest("start_date")
+
+    def is_active(self):
+        return self.start_date <= timezone.now() and self.end_date > timezone.now()
 
     def current_week_index(self):
         delta = timezone.now() - self.start_date

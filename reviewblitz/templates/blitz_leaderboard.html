@@ -5,8 +5,9 @@
 {% block content %}
 <h1>Review Blitz Leaderboard</h1>
 
-<p>This is the leaderboard for the ongoing {{ forum_name }} Review Blitz. To submit a review, {% if not user.is_authenticated %}please <a href="{% url 'login' %}">log in</a>{% elif not user.verified %}please <a href="{% url 'verification' %}">verify your {{ forum_name }} account</a>{% else %}<a href="{% url 'blitz_review_submit' %}">click here</a>{% endif %}.</p>
+<p>This is the leaderboard for the {% if blitz.is_active %}current{% else %}latest{% endif %} {{ forum_name }} Review Blitz.{% if blitz.is_active %} To submit a review, {% if not user.is_authenticated %}please <a href="{% url 'login' %}">log in</a>{% elif not user.verified %}please <a href="{% url 'verification' %}">verify your {{ forum_name }} account</a>{% else %}<a href="{% url 'blitz_review_submit' %}">click here</a>{% endif %}.{% endif %}</p>
 
+{% if blitz.is_active %}
 {% with blitz.get_current_theme as theme %}
 {% if theme %}
 <p>The current weekly theme is <strong>{{theme.name}}</strong>! {{theme.description}}</p>
@@ -14,6 +15,7 @@
 <p>The current week has no theme!</p>
 {% endif %}
 {% endwith %}
+{% endif %}
 
 <table class="table table-striped">
 <thead>
