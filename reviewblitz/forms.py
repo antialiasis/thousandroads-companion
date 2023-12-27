@@ -68,6 +68,11 @@ class BlitzReviewSubmissionForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
 
+        blitz = ReviewBlitz.get_current()
+
+        if not blitz.is_active():
+            self.add_error(None, "This Blitz is not currently active! Come back for the next Review Blitz.")
+
         self.chapter_link_formset.full_clean()
 
         cleaned_data["chapter_links"] = []

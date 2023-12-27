@@ -4,19 +4,24 @@
 
 {% block content %}
 <h1>Submit a Blitz Review</h1>
-    <form action="{% url 'blitz_review_submit' %}" method="post">
-        {% csrf_token %}
-        {% include "form.html" %}
-        <div class="chapter-links">
-            <label for="{{form.chapter_link_formset.forms.0.0.id_for_label}}">Chapter links</label>
-            <span class="help-text">If some of the chapters you read were {{blitz.scoring.long_chapter_bonus_words}} words or more, enter their links below to receive a bonus of {{blitz.scoring.long_chapter_bonus}} points per chapter. (You will be able to enter more after inputting one.)</span>
-            {{form.chapter_link_formset.management_form}}
-            {% for form in form.chapter_link_formset.forms %}
-                {% include "form.html" %}
-            {% endfor %}
-        </div>
-        <input type="submit" value="Submit" />
-    </form>
+
+{% if current_blitz.is_active %}
+<form action="{% url 'blitz_review_submit' %}" method="post">
+    {% csrf_token %}
+    {% include "form.html" %}
+    <div class="chapter-links">
+        <label for="{{form.chapter_link_formset.forms.0.0.id_for_label}}">Chapter links</label>
+        <span class="help-text">If some of the chapters you read were {{blitz.scoring.long_chapter_bonus_words}} words or more, enter their links below to receive a bonus of {{blitz.scoring.long_chapter_bonus}} points per chapter. (You will be able to enter more after inputting one.)</span>
+        {{form.chapter_link_formset.management_form}}
+        {% for form in form.chapter_link_formset.forms %}
+            {% include "form.html" %}
+        {% endfor %}
+    </div>
+    <input type="submit" value="Submit" />
+</form>
+{% else %}
+<p>This Blitz is not currently active! Come back when the next Review Blitz begins.</p>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
