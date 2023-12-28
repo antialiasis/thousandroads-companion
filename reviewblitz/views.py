@@ -60,7 +60,7 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
                 score += blitz.scoring.long_chapter_bonus
                 long_chapters.add(chapter)
 
-        blitzreview.theme = theme_bonuses_applied > 0
+        blitzreview.theme = form.cleaned_data["satisfies_theme"] and theme_bonuses_applied > 0
         blitzreview.score = score
         blitzreview.save()
 
@@ -97,14 +97,23 @@ class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
         blitz_review_obj = BlitzReview.objects.get(id=request.POST.get("blitz_review_id"))
         if request.POST.get("valid"):
             blitz_review_obj.approved = True
-            if request.POST.get("theme") and not blitz_review_obj.theme:
-                # Add theme bonus
-                blitz_review_obj.score += blitz_review_obj.blitz.scoring.theme_bonus
-                blitz_review_obj.theme = True
-            elif blitz_review_obj.theme and not request.POST.get("theme"):
-                # Remove theme bonus
-                blitz_review_obj.score -= blitz_review_obj.blitz.scoring.theme_bonus
-                blitz_review_obj.theme = False
+            set_theme_bonus = request.POST.get("theme")
+            if set_theme_bonus != blitz_review_obj.theme:
+                # Check how many points checking the theme bonus box is worth for this review.
+                weekly_theme = blitz_review_obj.get_theme()
+                theme_bonus_diff = (
+                    weekly_theme.claimable_theme_bonuses(True, blitz_review_obj, [])
+                    - weekly_theme.claimable_theme_bonuses(False, blitz_review_obj, [])
+                ) * blitz_review_obj.blitz.scoring.theme_bonus
+
+                if set_theme_bonus and not blitz_review_obj.theme:
+                    # Add theme bonus
+                    blitz_review_obj.score += theme_bonus_diff
+                    blitz_review_obj.theme = True
+                elif blitz_review_obj.theme and not set_theme_bonus:
+                    # Remove theme bonus
+                    blitz_review_obj.score -= theme_bonus_diff
+                    blitz_review_obj.theme = False
             blitz_review_obj.save()
             messages.success(request, f"{blitz_review_obj.review} was approved.")
         else:
@@ -119,6 +128,9 @@ class BlitzReviewApprovalQueueView(PermissionRequiredMixin, ListView):
 class BlitzLeaderboardView(ListView):
     template_name = "blitz_leaderboard.html"
     context_object_name = "leaderboard"
+
+    def get_object(self):
+        return ReviewBlitz.get_current()
 
     def get_queryset(self):
         return ReviewBlitz.get_current().get_leaderboard()
