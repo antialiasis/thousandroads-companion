@@ -1,5 +1,6 @@
 import json
 
+from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect, render
