@@ -180,7 +180,7 @@ class VerificationView(LoginRequiredMixin, FormView):
         self.request.user.member = form.member
         self.request.user.verified = True
         self.request.user.save()
-        messages.success(self.request, u"You have been successfully verified as %s!" % form.member)
+        messages.success(self.request, ("You have been successfully verified as %s!" % form.member) + ("You can change your 'About you' profile field on the forums back now, if you like." if not hasattr(settings, 'FORUM_API_KEY') else ""))
         return super(VerificationView, self).form_valid(form)
 
 
@@ -219,7 +219,7 @@ class PasswordResetView(SingleObjectMixin, FormView):
 
     def form_valid(self, form):
         user = form.save()
-        messages.success(self.request, u"Your password has been successfully reset! You have now been logged in.")
+        messages.success(self.request, u"Your password has been successfully reset! You have now been logged in." + ("You can change your 'About you' profile field on the forums back now, if you like." if not hasattr(settings, 'FORUM_API_KEY') else ""))
         response = super(PasswordResetView, self).form_valid(form)
         user = authenticate(username=user.username, password=form.cleaned_data['password1'])
         login(self.request, user)

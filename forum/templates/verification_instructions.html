@@ -1,10 +1,18 @@
 <ol>
 <li>Edit <strong><a href="https://{{forum_url}}account/account-details" target="_blank">your personal details</a></strong> on the forums. That link should take you there (opens in a new tab/window).</li>
+{% if verification_method == 'api' %}
 <li>Scroll to the very bottom of the page to find the "Verification code" field.</li>
 <li>Into this field, paste in the code <strong>{{user.verification_code}}</strong> (if there was already something in this field, replace it completely).</li>
 <li>Press the "Save" button at the bottom of the page.</li>
+{% else %}
+<li>Find the "About You" field near the bottom of the page.</li>
+<li>Within the editor, paste in the code <strong>{{user.verification_code}}</strong>.</li>
+<li>Press the "Save Changes" button at the bottom of the page.</li>
+<li>Ensure your profile can be viewed by everyone. Visit <strong><a href="https://{{forum_url}}account/privacy" target="_blank">privacy settings</a></strong> and change the "Allow users to: View your details on your profile page:" option to "All visitors" if it isn't already. You can change this back immediately after verification is complete if you'd like!</li>
+<li>Press the "Save Changes" button at the bottom of the page if necessary.</li>
+{% endif %}
 {% if not user.member %}
 <li>Go to <strong>your profile page</strong> on the forums. You can find it by hovering over your username near the top right corner of the page and clicking your username in the menu that pops up. Copy the profile page URL from your browser's address bar.</li>
 {% endif %}
-<li>Return to this page, paste the profile page URL into the box below, and press the "{{button_text|default:"Verify me!"}}" button below. If you did everything correctly, you should be successfully verified.</li>
+<li>Return to this page, paste the profile page URL into the box below, and press the "{{button_text|default:"Verify me!"}}" button below. If you did everything correctly, you should be successfully verified{% if verification_method == 'bio' %} and can remove the verification code from your profile and restrict access to your profile if you so desire{% endif %}.</li>
 </ol>

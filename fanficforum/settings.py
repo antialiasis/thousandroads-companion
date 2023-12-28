@@ -56,6 +56,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'forum.context_processors.forum_identity',
                 'forum.context_processors.enabled_apps',
+                'forum.context_processors.verification_method',
                 'reviewblitz.context_processors.current_blitz',
                 # 'awards.views.awards_context',
             ],

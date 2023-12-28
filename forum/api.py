@@ -4,7 +4,7 @@ import requests
 def make_api_request(method, endpoint, payload=None):
     resp = requests.request(
         method,
-        'https://%s/api/%s' % (settings.FORUM_URL, endpoint),
+        'https://%sapi/%s' % (settings.FORUM_URL, endpoint),
         data=payload,
         headers={
             'XF-Api-Key': settings.FORUM_API_KEY,
