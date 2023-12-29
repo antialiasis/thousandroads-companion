@@ -348,15 +348,6 @@ blockquote.detail {
         border-radius: 2px;
     }
 
-    .table-responsive {
-        table-layout: fixed;
-    }
-
-    .table-responsive th {
-        text-align: center;
-        vertical-align: middle !important;
-    }
-
     .navbar {
         border: none;
         border-bottom: 1px #e7e7e7 solid;
