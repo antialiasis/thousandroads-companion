@@ -287,9 +287,8 @@ blockquote.detail {
 @media(min-width:767px) {
     body {
         height: 100vh;
-        background-attachment: fixed;
         background: #1C469E;
-        background: radial-gradient(at left top, #548896, #04276f);
+        background: radial-gradient(at left top, #548896, #04276f) fixed;
     }
 
     .container {
