@@ -303,13 +303,33 @@ blockquote.detail {
     .container {
         margin-top: 5%;
         background: white;
-        padding: 3rem;
+        padding: 3rem 3rem 5rem;
         filter: drop-shadow(5px 5px 10px #000000);
     }
 
     .navbar {
         background: none;
         border: none;
+        margin-bottom: 5rem;
+    }
+
+    .navbar-nav {
+        display: flex;
+        float: right;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    ul.navbar-nav > li {
+        max-width: fit-content;
+    }
+
+    .navbar .container-fluid {
+        display: flex;
+    }
+
+    .navbar-header {
+        min-width: fit-content;
     }
 
     .navbar-header::before {
@@ -327,6 +347,11 @@ blockquote.detail {
         margin-left: 2rem;
         font-size: 4rem;
         -webkit-text-stroke: 2px #420e0e;
+    }
+
+    .navbar-collapse {
+        width: 100%;
+        padding: 0;
     }
 }
 
