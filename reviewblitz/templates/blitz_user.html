@@ -15,6 +15,7 @@
 {% if pending_reviews %}
 <h2>Pending Reviews</h2>
 
+<div class="table-responsive"><    
 <table class="table table-striped blitz-stats-table">
 <thead>
 <tr>
@@ -39,11 +40,13 @@
 {% endfor %}
 </tbody>
 </table>
+</div>
 {% endif %}
 
 <h2>Approved Reviews</h2>
 
 {% if approved_reviews %}
+<div class="table-responsive">  
 <table class="table table-striped blitz-stats-table">
 <thead>
 <tr>
@@ -68,6 +71,7 @@
 {% endfor %}
 </tbody>
 </table>
+</div>    
 {% else %}
 {% if pending_reviews %}
 <p>Your review submissions have been received, and the logistics team will review them as soon as possible!</p>

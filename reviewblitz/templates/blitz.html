@@ -20,6 +20,7 @@
 <h2>Your reviews</h2>
 
 {% if user_reviews %}
+<div class="table-responsive">
 <table class="table table-striped blitz-stats-table">
 <thead>
 <tr>
@@ -44,13 +45,14 @@
 {% endfor %}
 </tbody>
 </table>
+</div>
 {% else %}
 <p>You did not submit any reviews for this Blitz.</p>
 {% endif %}
 {% endif %}
 
 <h2>Leaderboard</h2>
-
+<div class="table-responsive">
 <table class="table table-striped">
 <thead>
 <tr>
@@ -73,4 +75,5 @@
 {% endfor %}
 </tbody>
 </table>
+</div>
 {% endblock %}
