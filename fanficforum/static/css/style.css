@@ -325,13 +325,3 @@ blockquote.detail {
         -webkit-text-stroke: 2px #420e0e;
     }
 }
-
-@media(max-width:766px) {
-    body {
-        background: red;
-    }
-
-    .container {
-        background: white;
-    }
-}
