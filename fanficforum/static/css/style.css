@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Courgette&display=swap');
 
-
 body {
     background: #1C469E;
     background: radial-gradient(at left top, #548896, #04276f) fixed;
@@ -353,6 +352,10 @@ blockquote.detail {
         border-bottom: 1px #e7e7e7 solid;
     }
 
+    .navbar-header {
+        z-index: 99;
+    }
+
     .navbar > .container-fluid .navbar-brand {
         font-size: 3rem;
         -webkit-text-stroke: 1px #c25130;
@@ -372,6 +375,7 @@ blockquote.detail {
     .navbar-collapse {
         background: #fff;
         margin-top: -2px;
+        z-index: 1;
         width: 100vw;
         border-bottom: 1px #e7e7e7 solid;
         filter: drop-shadow(0px 10px 5px rgba(0, 0, 0, 0.33));
