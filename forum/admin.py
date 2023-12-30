@@ -33,7 +33,7 @@ class MemberAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super(MemberAdmin, self).save_model(request, obj, form, change)
-        print(obj.user_id, form.instance.user_id, self.old_member_id)
+        print(obj.user_id, form.instance.user_id, self.old_member_id if hasattr(self, "old_member_id") else '')
         if change and 'user_id' in form.changed_data:
             old_instance = Member.objects.get(user_id=self.old_member_id)
             member_user_id_updated.send(sender=self.__class__, instance=obj, old_instance=old_instance)
