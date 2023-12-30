@@ -315,8 +315,6 @@ blockquote.detail {
 
     .navbar-nav {
         display: flex;
-        float: right;
-        flex-wrap: wrap;
         justify-content: flex-end;
     }
 
@@ -326,9 +324,11 @@ blockquote.detail {
 
     .navbar .container-fluid {
         display: flex;
+        flex-wrap: wrap;
     }
 
     .navbar-header {
+        min-width: -moz-fit-content;
         min-width: fit-content;
     }
 
@@ -350,7 +350,8 @@ blockquote.detail {
     }
 
     .navbar-collapse {
-        width: 100%;
+        width: -moz-fit-content;
+        width: fit-content;
         padding: 0;
     }
 }
