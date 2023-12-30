@@ -79,7 +79,7 @@ class ReviewBlitz(models.Model):
         return theme.theme if theme else None
 
     def get_leaderboard(self):
-        return BlitzReview.objects.filter(blitz=self, approved=True).values('review__author').annotate(points=ExpressionWrapper(Sum('score') + Coalesce(Max('review__author__blitz_members__bonus_points'), 0), output_field=DecimalField()), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
+        return BlitzReview.objects.filter(blitz=self, approved=True).values('review__author').filter(review__author__blitz_members__blitz=self).annotate(points=ExpressionWrapper(Sum('score') + Coalesce(Max('review__author__blitz_members__bonus_points'), 0), output_field=DecimalField()), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
 
 
 class ReviewBlitzTheme(models.Model):
