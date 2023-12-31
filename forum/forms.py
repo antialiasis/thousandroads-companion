@@ -290,8 +290,7 @@ class VerificationForm(forms.Form):
             profile_page = self.cleaned_data['profile_url']
         else:
             raise ValidationError(u"You must provide a profile URL.")
-        self.user.validate_verification_code(profile_page)
-        self.member = profile_page.object
+        self.member = self.user.validate_verification_code(profile_page)
         self.member.save()
         return self.cleaned_data
 

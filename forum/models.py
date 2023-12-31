@@ -278,6 +278,7 @@ class User(AbstractUser):
     verification_code = models.CharField(max_length=10, default=get_verification_code)
 
     def validate_verification_code(self, page):
+        member = page.object
         if hasattr(settings, 'FORUM_API_KEY'):
             username, verification_code = get_user_info(page.object.user_id)
 
@@ -286,12 +287,17 @@ class User(AbstractUser):
 
             if self.verification_code != verification_code.strip():
                 raise ValidationError("Verification code incorrect. Please double-check that you followed the instructions correctly! If the problem persists, please contact %s to be manually verified." % settings.FORUM_NAME)
+
+            # Set the member's username - their profile may not be public.
+            member.username = username
         else:
             if self.verification_code not in page.get_bio():
                 raise ValidationError(u"Your verification code was not found in your profile's About section. Please ensure you followed the instructions correctly. If the problem persists, please contact an admin on the forums to be manually verified.")
         # Ensure each verification can be used only once
         self.verification_code = get_verification_code()
         self.save()
+
+        return member
 
 
 class Genre(models.Model):

@@ -1,10 +1,11 @@
 from django.conf import settings
 import requests
 
-def make_api_request(method, endpoint, payload=None):
+def make_api_request(method, endpoint, payload=None, params=None):
     resp = requests.request(
         method,
         'https://%sapi/%s' % (settings.FORUM_URL, endpoint),
+        params=params,
         data=payload,
         headers={
             'XF-Api-Key': settings.FORUM_API_KEY,
@@ -37,3 +38,48 @@ def get_user_info(user_id):
         return (None, None)
     else:
         return (user_data['user']['username'], user_data['user']['custom_fields'].get('verificationcode', ''))
+
+
+def get_user_threads(user_id, page=1):
+    return make_api_request('GET', 'threads', params={'starter_id': user_id, 'page': page})
+
+
+class ThreadAPIIterator:
+    page = None
+    page_posts = None
+    index = None
+
+    def __init__(self, thread_id):
+        self.thread_id = thread_id
+        self.page = 0
+        self.response = {'posts': [], 'pagination': {'last_page': 1}}
+        self.index = 0
+
+    def __next__(self):
+        if self.index >= len(self.response['posts']):
+            if self.page >= self.response['pagination']['last_page']:
+                raise StopIteration
+
+            self.page += 1
+            try:
+                self.response = make_api_request('GET', 'threads/%s/posts' % self.thread_id, params={'page': self.page})
+            except Exception:
+                raise StopIteration
+            if not self.response.get('posts'):
+                raise StopIteration
+            self.index = 0
+        post = self.response['posts'][self.index]
+        self.index += 1
+        return post
+
+
+class ThreadPosts:
+    def __init__(self, thread_id):
+        self.thread_id = thread_id
+
+    def __iter__(self):
+        return ThreadAPIIterator(self.thread_id)
+
+
+def get_thread_posts(thread_id):
+    return ThreadPosts(thread_id)
