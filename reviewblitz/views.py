@@ -243,7 +243,7 @@ class HasReviewedView(FormView):
                 'reviewer': "https://{}members/{}/".format(settings.FORUM_URL, self.request.GET['reviewer']),
                 'reviewee': "https://{}members/{}/".format(settings.FORUM_URL, self.request.GET['reviewee'])
             })
-        elif self.request.user.is_authenticated() and self.request.user.member:
+        elif self.request.user.is_authenticated and self.request.user.member:
             kwargs.update(initial={
                 'reviewer': self.request.user.member.link()
             })
