@@ -2,7 +2,7 @@ from django.urls import reverse_lazy, re_path
 from django.views.generic.base import TemplateView, RedirectView
 from django.contrib.auth.views import LoginView, LogoutView
 from forum.views import VerificationView, RegisterView, EditUserInfoView, ForumObjectLookupView, PasswordResetLookupView, PasswordResetView, CatalogView, CatalogAuthorView, CatalogFicView, CatalogSearchView, CatalogGenreView, CatalogTagView
-from reviewblitz.views import BlitzReviewSubmissionFormView, BlitzReviewApprovalQueueView, BlitzLeaderboardView, BlitzUserView, BlitzHistoryView, BlitzView
+from reviewblitz.views import BlitzReviewSubmissionFormView, BlitzReviewApprovalQueueView, BlitzLeaderboardView, BlitzUserView, BlitzHistoryView, BlitzView, HasReviewedView
 from forum.models import Member, Fic, Chapter
 
 from django.contrib import admin
@@ -29,11 +29,12 @@ urlpatterns = [
     re_path(r'^lookup/member/$', ForumObjectLookupView.as_view(model=Member), name='lookup_member'),
     re_path(r'^lookup/chapter/$', ForumObjectLookupView.as_view(model=Chapter), name='lookup_chapter'),
 
-    re_path(r'^blitz/history$', BlitzHistoryView.as_view(), name="blitz_history"),
-    re_path(r'^blitz/submit$', BlitzReviewSubmissionFormView.as_view(), name="blitz_review_submit"),
-    re_path(r'^blitz/queue$', BlitzReviewApprovalQueueView.as_view(), name="blitz_review_approval_queue"),
-    re_path(r'^blitz/leaderboard$', BlitzLeaderboardView.as_view(), name="blitz_leaderboard"),
-    re_path(r'^blitz/user$', BlitzUserView.as_view(), name="blitz_user"),
+    re_path(r'^blitz/history/$', BlitzHistoryView.as_view(), name="blitz_history"),
+    re_path(r'^blitz/submit/$', BlitzReviewSubmissionFormView.as_view(), name="blitz_review_submit"),
+    re_path(r'^blitz/queue/$', BlitzReviewApprovalQueueView.as_view(), name="blitz_review_approval_queue"),
+    re_path(r'^blitz/leaderboard/$', BlitzLeaderboardView.as_view(), name="blitz_leaderboard"),
+    re_path(r'^blitz/has_reviewed/$', HasReviewedView.as_view(), name="has_reviewed"),
+    re_path(r'^blitz/user/$', BlitzUserView.as_view(), name="blitz_user"),
     re_path(r'^blitz/(?P<pk>\d+)/$', BlitzView.as_view(), name="blitz"),
 
     re_path(r'^admin/', admin.site.urls),

@@ -40,6 +40,7 @@
             <div>
                 <button type="submit" class="btn btn-success" id="approve_{{ review.id }}" name="valid" value="1">Approve</button>
                 <button type="submit" class="btn btn-danger" id="reject_{{ review.id }}" onclick="return confirmDelete(false);">Reject</button>
+                <a href="{% url 'has_reviewed' %}?reviewer={{review.review.author.user_id}}&amp;reviewee={{review.review.fic.get_authors.0.user_id}}">Has {{review.review.author}} reviewed {{review.review.fic.get_authors.0}} before?</a>
             </div>
         </form>
     </div>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Reviewed before...?{% endblock %}
+
+{% block content %}
+<h1>Reviewed before...?</h1>
+
+<div class="row">
+<div class="col-md-6">
+<p>Use this utility to check if a certain reviewer has reviewed a certain author before.</p>
+
+<form action="" method="post">
+{% csrf_token %}
+{% include "form.html" %}
+<p><button type="submit" class="btn btn-primary">Check</button></p>
+</form>
+</div>
+
+<div class="col-md-6">
+{% if not results is None %}
+{% if results %}
+<p>{{reviewer}} has posted in the following fanfiction threads by {{reviewee}}:</p>
+<ul>
+{% for result in results %}
+<li><a href="{{result.link}}" target="_blank">{{result.title}}</a> (<a href="{{result.search}}" target="_blank">see posts</a>)</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>{{reviewer}} has never posted in any fanfiction thread by {{reviewee}}!</p>
+
+<p>(If {{reviewer}} has judged a contest entry by {{reviewee}}, that will not be shown here.)</p>
+{% endif %}
+{% endif %}
+</div>
+</div>
+{% endblock %}

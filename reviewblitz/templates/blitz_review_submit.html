@@ -5,6 +5,8 @@
 {% block content %}
 <h1>Submit a Blitz Review</h1>
 
+<p>Wondering if you've reviewed an author before? <a href="{% url 'has_reviewed' %}">Use the tool here to find out.</a></p>
+
 {% if current_blitz.is_active %}
 <form action="{% url 'blitz_review_submit' %}" method="post">
     {% csrf_token %}

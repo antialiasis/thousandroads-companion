@@ -2,8 +2,13 @@ from django import forms
 from django.forms.formsets import formset_factory
 from django.core.exceptions import ValidationError
 from forum.forms import ForumLinkField, ForumObjectField
-from forum.models import ReviewPage, ChapterPage
+from forum.models import ReviewPage, ChapterPage, MemberPage
 from reviewblitz.models import BlitzReview, ReviewBlitz
+
+
+class HasReviewedForm(forms.Form):
+    reviewer = ForumLinkField(MemberPage, help_text="Enter the full link to the profile page of the reviewer you want to check.")
+    reviewee = ForumLinkField(MemberPage, label="Author", help_text="Enter the full link to the profile page of the author you want to check.")
 
 
 class ReviewField(forms.Field):

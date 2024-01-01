@@ -1,3 +1,6 @@
+import urllib
+
+from django.conf import settings
 from django.db.models import Sum
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -6,9 +9,11 @@ from django.views.generic import ListView, FormView, TemplateView, DetailView
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 
+from forum.models import MemberPage, get_soup
 from forum.views import LoginRequiredMixin, VerificationRequiredMixin, ForumObjectLookupView
+from forum.utils import forum_url_from_path
 from reviewblitz.models import BlitzReview, ReviewBlitz, ReviewChapterLink, BlitzUser
-from reviewblitz.forms import BlitzReviewSubmissionForm, ChapterLinkFormSet
+from reviewblitz.forms import BlitzReviewSubmissionForm, ChapterLinkFormSet, HasReviewedForm
 
 
 class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixin, FormView):
@@ -214,4 +219,72 @@ class BlitzView(DetailView):
             leaderboard=self.get_object().get_leaderboard(),
             **kwargs
         )
+
+
+class HasReviewedView(FormView):
+    form_class = HasReviewedForm
+    template_name = "has_reviewed.html"
+
+    def get(self, *args, **kwargs):
+        form = self.get_form()
+        if form.is_bound:
+            if form.is_valid():
+                return self.form_valid(form)
+            else:
+                return self.form_invalid(form)
+        else:
+            return super().get(*args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if 'reviewer' in self.request.GET and 'reviewee' in self.request.GET:
+            # Populate the form!
+            kwargs.update(data={
+                'reviewer': "https://{}members/{}/".format(settings.FORUM_URL, self.request.GET['reviewer']),
+                'reviewee': "https://{}members/{}/".format(settings.FORUM_URL, self.request.GET['reviewee'])
+            })
+        return kwargs
+
+    def form_valid(self, form):
+        reviewer = form.cleaned_data['reviewer'].object
+        reviewee = form.cleaned_data['reviewee'].object
+
+        # First, scrape the search results for the author's threads.
+        soup = get_soup("https://{}search/member?user_id={}&content=thread".format(settings.FORUM_URL, reviewee.user_id))
+
+        results = []
+
+        threads = []
+
+        def process_results(result_threads):
+            for result in result_threads:
+                print(result.find('div', class_="contentRow-minor").ul.find_all('li'))
+                if result.find('div', class_="contentRow-minor").ul.find_all('li')[-1].a['href'] in settings.VALID_FIC_FORUMS:
+                    threads.append({'link': forum_url_from_path(result.a['href']), 'title': result.a.contents[-1]})
+
+        process_results(soup.find_all('div', class_="contentRow-main"))
+
+        pagination = soup.find('nav', class_="pageNavWrapper")
+        if pagination:
+            while nextLink := pagination.find('a', class_="pageNav-jump--next"):
+                print("Fetching next page...", nextLink['href'])
+                soup = get_soup(forum_url_from_path(nextLink['href']))
+
+                pagination = soup.find('nav', class_="pageNavWrapper")
+                process_results(soup.find_all('div', class_="contentRow-main"))
+
+        for thread in threads:
+            print("Checking thread:", thread)
+            soup = get_soup("{}who-replied/?xfFilter[text]={}".format(thread['link'], urllib.parse.quote_plus(reviewer.username)))
+
+            user_list = soup.find('div', class_="userList")
+            if user_list:
+                # Verify that this really is the correct user.
+                for user in user_list.find_all('div', class_="contentRow"):
+                    if int(MemberPage.get_params_from_url(user.h3.a['href'])['user_id']) == reviewer.user_id:
+                        thread['search'] = forum_url_from_path(user.find('div', class_="whoreplied--postcount").a['href'])
+                        results.append(thread)
+                        break
+
+        return self.render_to_response(self.get_context_data(form=form, reviewer=reviewer, reviewee=reviewee, results=results))
 

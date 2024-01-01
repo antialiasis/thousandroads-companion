@@ -225,7 +225,7 @@ class MemberPage(ForumPage):
 
     @classmethod
     def from_params(self, save=False, force_download=False, url=None, object_type=None, **kwargs):
-        if not url.endswith('/about/'):
+        if url and not url.endswith('/about/'):
             # Trim off fragment identifier, if any
             # Allows app to accept e.g. https://forums.example.com/index.php?members/negrek.1/#about
             if url.rfind('#') > -1:
@@ -249,8 +249,11 @@ class MemberPage(ForumPage):
 
     def load_object(self, save=True, object_type=None):
         soup = self.get_soup()
-        username = soup.find('h1', class_=u"p-title-value").text
-        self.object.username = username
+        username = soup.find('h1', class_=u"p-title-value")
+        if not username:
+            raise ValidationError("Could not fetch user profile!")
+
+        self.object.username = username.text
         self.object._page = self
         if save:
             self.object.save()
@@ -347,17 +350,20 @@ class Fic(ForumObject, models.Model):
         ordering = ['title', 'thread_id', 'post_id']
 
     def __str__(self):
-        if self.pk is not None:
-            authors = [author.username for author in self.authors.all()]
-        else:
-            authors = [author.username for author in self._authors]
-        return u"%s by %s" % (self.title, pretty_join(authors))
+        return u"%s by %s" % (self.title, pretty_join(self.get_author_names()))
 
     def to_dict(self):
         return {'type': 'fic', 'pk': self.pk, 'name': str(self), 'object': {'title': self.title, 'authors': [author.pk for author in self.authors.all()]}}
 
     def get_authors(self):
         return list(self.authors.all()) if self.pk else self._authors
+
+    def get_author_names(self):
+        if self.pk is not None:
+            authors = [author.username for author in self.authors.all()]
+        else:
+            authors = [author.username for author in self._authors]
+        return pretty_join(authors)
 
     def link(self):
         if self.post_id:
@@ -734,6 +740,8 @@ class PostPage(ThreadPage):
             self.object.threadmark_title = post.threadmark_title
 
         thread_link = soup.find(class_="message-attribution-main").a
+        if not thread_link:
+            raise ValidationError("Could not fetch forum thread.")
         self.object.thread_id = ThreadPage.get_params_from_url(thread_link['href'])['thread_id']
 
         if save:
