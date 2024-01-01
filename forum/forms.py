@@ -36,6 +36,8 @@ class ForumLinkField(forms.CharField):
         return value
 
     def prepare_value(self, value):
+        if isinstance(value, str):
+            return value
         if not isinstance(value, self.page_class):
             return ''
         return value.get_url()

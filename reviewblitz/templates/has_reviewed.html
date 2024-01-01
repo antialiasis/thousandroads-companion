@@ -21,14 +21,14 @@
 <p>{{reviewer}} has posted in the following fanfiction threads by {{reviewee}}:</p>
 <ul>
 {% for result in results %}
-<li><a href="{{result.link}}" target="_blank">{{result.title}}</a> (<a href="{{result.search}}" target="_blank">see posts</a>)</li>
+<li><a href="{{result.link}}" target="_blank">{{result.title}}</a> (<a href="{{result.search}}" target="_blank">{{result.count}} posts</a>)</li>
 {% endfor %}
 </ul>
 {% else %}
 <p>{{reviewer}} has never posted in any fanfiction thread by {{reviewee}}!</p>
+{% endif %}
 
 <p>(If {{reviewer}} has judged a contest entry by {{reviewee}}, that will not be shown here.)</p>
-{% endif %}
 {% endif %}
 </div>
 </div>

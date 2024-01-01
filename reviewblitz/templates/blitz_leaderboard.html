@@ -11,6 +11,10 @@
 {% with blitz.get_current_theme as theme %}
 {% if theme %}
 <p>The current weekly theme is <strong>{{theme.name}}</strong>! {{theme.description}}</p>
+
+{% if theme.name == "New Faces" %}
+<p>Wondering if you've reviewed an author before? <a href="{% url 'has_reviewed' %}">Use the tool here to find out.</a></p>
+{% endif %}
 {% else %}
 <p>The current week has no theme!</p>
 {% endif %}

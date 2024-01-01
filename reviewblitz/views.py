@@ -279,7 +279,9 @@ class HasReviewedView(FormView):
                 # Verify that this really is the correct user.
                 for user in user_list.find_all('div', class_="contentRow"):
                     if int(MemberPage.get_params_from_url(user.h3.a['href'])['user_id']) == reviewer.user_id:
-                        thread['search'] = forum_url_from_path(user.find('div', class_="whoreplied--postcount").a['href'])
+                        postcount = user.find('div', class_="whoreplied--postcount").a
+                        thread['search'] = forum_url_from_path(postcount['href'])
+                        thread['count'] = postcount.text.strip()
                         results.append(thread)
                         break
 
