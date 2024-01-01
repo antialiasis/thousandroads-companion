@@ -255,9 +255,10 @@ class MemberPage(ForumPage):
             if hasattr(settings, 'FORUM_API_KEY'):
                 try:
                     username, _ = get_user_info(self.object.user_id)
-                except Exception:
-                    pass
-            raise ValidationError("Could not fetch user profile! Please verify that you've got the correct link.")
+                except Exception as e:
+                    raise ValidationError("This user does not seem to exist! Please verify that you've got the correct link.")
+            else:
+                raise ValidationError("Could not fetch user profile! Please verify that you've got the correct link.")
         else:
             username = username_heading.text
 
