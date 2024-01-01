@@ -258,7 +258,6 @@ class HasReviewedView(FormView):
 
         def process_results(result_threads):
             for result in result_threads:
-                print(result.find('div', class_="contentRow-minor").ul.find_all('li'))
                 if result.find('div', class_="contentRow-minor").ul.find_all('li')[-1].a['href'] in settings.VALID_FIC_FORUMS:
                     threads.append({'link': forum_url_from_path(result.a['href']), 'title': result.a.contents[-1]})
 
@@ -267,14 +266,12 @@ class HasReviewedView(FormView):
         pagination = soup.find('nav', class_="pageNavWrapper")
         if pagination:
             while nextLink := pagination.find('a', class_="pageNav-jump--next"):
-                print("Fetching next page...", nextLink['href'])
                 soup = get_soup(forum_url_from_path(nextLink['href']))
 
                 pagination = soup.find('nav', class_="pageNavWrapper")
                 process_results(soup.find_all('div', class_="contentRow-main"))
 
         for thread in threads:
-            print("Checking thread:", thread)
             soup = get_soup("{}who-replied/?xfFilter[text]={}".format(thread['link'], urllib.parse.quote_plus(reviewer.username)))
 
             user_list = soup.find('div', class_="userList")
