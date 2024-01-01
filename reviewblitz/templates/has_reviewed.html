@@ -8,7 +8,9 @@
 <div class="col-md-6">
 <p>Use this utility to check if a certain reviewer has reviewed a certain author before.</p>
 
-<form action="" method="post">
+{% if user.member %}<p>(The "Reviewer" field is prefilled with your own profile.)</p>{% endif %}
+
+<form action="{% url 'has_reviewed' %}" method="post">
 {% csrf_token %}
 {% include "form.html" %}
 <p><button type="submit" class="btn btn-primary">Check</button></p>

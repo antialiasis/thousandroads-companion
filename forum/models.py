@@ -249,11 +249,19 @@ class MemberPage(ForumPage):
 
     def load_object(self, save=True, object_type=None):
         soup = self.get_soup()
-        username = soup.find('h1', class_=u"p-title-value")
-        if not username:
-            raise ValidationError("Could not fetch user profile!")
+        username_heading = soup.find('h1', class_=u"p-title-value")
+        if not username_heading or username_heading.text in ('Log in', 'Oops! We ran into some problems.'):
+            # Check if we can fetch it from the API instead.
+            if hasattr(settings, 'FORUM_API_KEY'):
+                try:
+                    username, _ = get_user_info(self.object.user_id)
+                except Exception:
+                    pass
+            raise ValidationError("Could not fetch user profile! Please verify that you've got the correct link.")
+        else:
+            username = username_heading.text
 
-        self.object.username = username.text
+        self.object.username = username
         self.object._page = self
         if save:
             self.object.save()
