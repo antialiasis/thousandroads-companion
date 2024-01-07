@@ -359,7 +359,7 @@ class Fic(ForumObject, models.Model):
         ordering = ['title', 'thread_id', 'post_id']
 
     def __str__(self):
-        return u"%s by %s" % (self.title, pretty_join(self.get_author_names()))
+        return u"%s by %s" % (self.title, self.get_author_names())
 
     def to_dict(self):
         return {'type': 'fic', 'pk': self.pk, 'name': str(self), 'object': {'title': self.title, 'authors': [author.pk for author in self.authors.all()]}}
