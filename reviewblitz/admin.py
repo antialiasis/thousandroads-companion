@@ -8,13 +8,13 @@ class WeeklyThemeAdmin(admin.ModelAdmin):
 class ThemeInlineFormSet(BaseInlineFormSet):
     def __init__(self, *args, instance, **kwargs):
         existing_themes = instance.themes.count() if instance.pk else 0
-        return super().__init__(*args, instance=instance, initial=[{'week': n} for n in range(existing_themes + 1, 5)], **kwargs)
+        return super().__init__(*args, instance=instance, initial=[{'week': n} for n in range(existing_themes + 1, 6)], **kwargs)
 
 class BlitzThemeInline(admin.TabularInline):
     model = ReviewBlitzTheme
     formset = ThemeInlineFormSet
     extra = 4
-    max_num = 4
+    max_num = 5
 
 class ReviewBlitzAdmin(admin.ModelAdmin):
     list_display = ['title', 'start_date', 'end_date']
