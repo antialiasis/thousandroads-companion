@@ -16,7 +16,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from forum.models import User, Member, Fic, Genre
+from forum.models import User, Member, Fic, Genre, get_verification_code
 from forum.forms import VerificationForm, RegisterForm, UserInfoForm, UserLookupForm, PasswordResetForm, CatalogSearchForm, CatalogFicForm
 
 
@@ -194,7 +194,7 @@ class PasswordResetLookupView(FormView):
 
     def form_valid(self, form):
         self.object = form.user
-        self.object.verification_code = User.objects.make_random_password()
+        self.object.verification_code = get_verification_code()
         self.object.save()
         return super(PasswordResetLookupView, self).form_valid(form)
 

@@ -33,6 +33,8 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         weekly_theme = blitzreview.get_theme()
         prev_reviews = BlitzReview.objects.filter(blitz=blitz, review__author=review.author, review__fic=review.fic)
 
+        # Find how many effective chapters (i.e. number of chapters or increments of the Blitz's
+        # words per chapter, whichever is smaller) we've already reviewed of this fic this Blitz.
         prev_chapters_reviewed = 0
         for r in prev_reviews:
             effective_chapters_reviewed = r.effective_chapters_reviewed()
@@ -42,15 +44,17 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         effective_chapters_reviewed = blitzreview.effective_chapters_reviewed()
         print(f"Effective chapters reviewed for this review: {effective_chapters_reviewed}")
 
+        # The base score is the number of effective chapters reviewed times the base chapter points.
         score = effective_chapters_reviewed * blitz.scoring.chapter_points
         print(f"Base score: {score}")
 
-        # Check how many consecutive chapter intervals we tick over with this review.
+        # Check how many consecutive chapter intervals we tick over with this review and apply the consecutive chapter bonus.
         if not weekly_theme or weekly_theme.consecutive_chapter_bonus_applies:
             chapter_bonuses = (effective_chapters_reviewed + prev_chapters_reviewed) // blitz.scoring.consecutive_chapter_interval - prev_chapters_reviewed // blitz.scoring.consecutive_chapter_interval
             print(f"Chapter bonuses: {chapter_bonuses}")
             score += chapter_bonuses * blitz.scoring.consecutive_chapter_bonus
 
+        # Apply theme bonuses.
         theme_bonuses_applied = 0
 
         if weekly_theme:
@@ -59,11 +63,20 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
                 print(f"Claiming weekly theme {theme_bonuses_applied}x - +{blitz.scoring.theme_bonus * theme_bonuses_applied} points!")
                 score += blitz.scoring.theme_bonus * theme_bonuses_applied
 
+        # Apply long chapter bonuses.
         long_chapters = set()
         for chapter in form.cleaned_data["chapter_links"]:
             if chapter.word_count >= blitz.scoring.long_chapter_bonus_words:
                 score += blitz.scoring.long_chapter_bonus
                 long_chapters.add(chapter)
+
+        # Apply the heat bonus.
+        if blitz.scoring.heat_bonus_multiplier:
+            heat_bonus = blitzreview.calculate_heat_bonus()
+            score += heat_bonus
+            # Keep track of the heat bonus we got for this review if any, since we won't be able to recalculate it later,
+            # and we need to track whether we already received a heat bonus for this author!
+            blitzreview.heat_bonus = heat_bonus
 
         blitzreview.theme = form.cleaned_data["satisfies_theme"] and theme_bonuses_applied > 0
         blitzreview.score = score

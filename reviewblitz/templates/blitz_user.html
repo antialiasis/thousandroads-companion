@@ -24,6 +24,7 @@
 <th>Wordcount</th>
 <th>Week</th>
 <th>Theme</th>
+<th>Heat Bonus</th>
 <th>Points</th>
 </tr>
 </thead>
@@ -35,6 +36,7 @@
 <td>{{review.review.word_count}}</td>
 <td>{{review.week_index}}{% with review.get_theme as theme %}{% if theme %} - {{review.get_theme}}{% endif %}{% endwith %}</td>
 <td>{% if review.theme %}Yes{% else %}No{% endif %}</td>
+<td>{{review.heat_bonus}}</td>
 <td>{{review.score}}</td>
 </tr>
 {% endfor %}
@@ -55,6 +57,7 @@
 <th>Wordcount</th>
 <th>Week</th>
 <th>Theme</th>
+<th>Heat Bonus</th>
 <th>Points</th>
 </tr>
 </thead>
@@ -66,6 +69,7 @@
 <td>{{review.review.word_count}}</td>
 <td>{{review.week_index}}{% with review.get_theme as theme %}{% if theme %} - {{review.get_theme}}{% endif %}{% endwith %}</td>
 <td>{% if review.theme %}Yes{% else %}No{% endif %}</td>
+<td>{{review.heat_bonus}}</td>
 <td>{{review.score}}</td>
 </tr>
 {% endfor %}

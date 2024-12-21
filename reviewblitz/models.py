@@ -1,3 +1,4 @@
+import decimal
 from django.db.models import Sum, F, Count, Max, ExpressionWrapper, DecimalField
 from django.db.models.functions import Coalesce
 from django.db import models
@@ -36,14 +37,16 @@ class WeeklyTheme(models.Model):
 
 class ReviewBlitzScoring(models.Model):
     name = models.CharField(max_length=50)
-    min_words = models.PositiveIntegerField()
-    words_per_chapter = models.PositiveIntegerField()
-    chapter_points = models.DecimalField(max_digits=3, decimal_places=2)
-    consecutive_chapter_interval = models.PositiveIntegerField()
-    consecutive_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2)
-    theme_bonus = models.DecimalField(max_digits=3, decimal_places=2)
-    long_chapter_bonus_words = models.PositiveIntegerField()
-    long_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2)
+    min_words = models.PositiveIntegerField(verbose_name="Minimum words for review", help_text="The minimum number of words a review must be to be counted.")
+    words_per_chapter = models.PositiveIntegerField(help_text="The number of words per chapter to make a review count for full points for each chapter.")
+    chapter_points = models.DecimalField(max_digits=3, decimal_places=2, help_text="The number of points given for each chapter.")
+    consecutive_chapter_interval = models.PositiveIntegerField(help_text="The number of chapters that must be reviewed to earn the consecutive chapter bonus (if enabled for the weekly theme).")
+    consecutive_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2, help_text="The bonus points given for each (consecutive chapter interval) number of chapters reviewed of the same fic.")
+    theme_bonus = models.DecimalField(max_digits=3, decimal_places=2, help_text="The bonus given for a review that adheres to the weekly theme.")
+    long_chapter_bonus_words = models.PositiveIntegerField(help_text="The word count threshold above which a long chapter bonus can be given.")
+    long_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2, help_text="The bonus points given for reviewing a long chapter.")
+    heat_bonus_multiplier = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The multiplier applied to the ratio of (reviews given + 1) / (reviews received + 1) to determine the heat bonus. (Set to 0 to disable this bonus.)")
+    max_heat_bonus = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The maximum heat bonus that can be given.")
 
     def __str__(self):
         return self.name
@@ -79,7 +82,65 @@ class ReviewBlitz(models.Model):
         return theme.theme if theme else None
 
     def get_leaderboard(self):
-        return BlitzReview.objects.filter(blitz=self, approved=True).values('review__author').filter(review__author__blitz_members__blitz=self).annotate(points=ExpressionWrapper(Sum('score') + Coalesce(Max('review__author__blitz_members__bonus_points'), 0), output_field=DecimalField()), reviews=Count('review'), chapters=Sum('review__chapters'), words=Sum('review__word_count'), username=F('review__author__username')).order_by('-points')
+        return BlitzUser.objects.raw("""
+            SELECT
+                s.id,
+                s.username,
+                s.points,
+                s.reviews,
+                s.chapters,
+                s.words,
+                s.chapters_received,
+                (CASE
+                    WHEN s.base_heat_bonus < 0 THEN 0
+                    WHEN s.base_heat_bonus > %(max_heat_bonus)s THEN %(max_heat_bonus)s
+                    ELSE ROUND(s.base_heat_bonus * 2) / 2
+                END) AS heat_bonus
+            FROM (
+                SELECT
+                    blitz_user.id,
+                    member.username,
+                    SUM(blitz_review.score) + COALESCE(blitz_user.bonus_points, 0) AS points,
+                    COUNT(blitz_review.id) AS reviews,
+                    SUM(review.chapters) AS chapters,
+                    SUM(review.word_count) AS words,
+                    COALESCE(received_reviews.chapters_received, 0) AS chapters_received,
+                    COALESCE(((SUM(review.chapters) + 1) / (COALESCE(received_reviews.chapters_received, 0) + 1)) * %(heat_bonus_multiplier)s - 1, 0) AS base_heat_bonus
+                FROM reviewblitz_blitzuser AS blitz_user
+                    INNER JOIN forum_member AS member
+                        ON blitz_user.member_id = member.user_id
+                    LEFT JOIN forum_review AS review
+                        ON review.author_id = member.user_id
+                    LEFT JOIN reviewblitz_blitzreview AS blitz_review
+                        ON blitz_review.review_id = review.post_id
+                        AND blitz_review.blitz_id = blitz_user.blitz_id
+                    LEFT JOIN (
+                        SELECT
+                            authors.member_id,
+                            SUM(CASE WHEN ROUND(received_review.word_count / %(words_per_chapter)s) < received_review.chapters THEN ROUND(received_review.word_count / %(words_per_chapter)s) ELSE received_review.chapters END) AS chapters_received
+                        FROM forum_review AS received_review
+                            INNER JOIN reviewblitz_blitzreview AS received_blitzreview
+                                ON received_blitzreview.review_id = received_review.post_id
+                                AND received_blitzreview.blitz_id = %(blitz_id)s
+                                AND received_blitzreview.approved
+                            INNER JOIN forum_fic AS fic
+                                ON received_review.fic_id = fic.id
+                            INNER JOIN forum_fic_authors AS authors
+                                ON authors.fic_id = fic.id
+                        GROUP BY authors.member_id
+                    ) AS received_reviews
+                        ON received_reviews.member_id = member.user_id
+                WHERE blitz_user.blitz_id = %(blitz_id)s
+                    AND blitz_review.approved
+                GROUP BY blitz_user.id, member.user_id, received_reviews.member_id
+                ORDER BY points DESC
+            ) s
+        """, dict(
+            blitz_id=self.id,
+            words_per_chapter=self.scoring.words_per_chapter,
+            max_heat_bonus=self.scoring.max_heat_bonus,
+            heat_bonus_multiplier=self.scoring.heat_bonus_multiplier
+        ))
 
 
 class ReviewBlitzTheme(models.Model):
@@ -102,6 +163,7 @@ class BlitzReview(models.Model):
     theme = models.BooleanField(default=False)
     score = models.DecimalField(max_digits=4, decimal_places=2)
     approved = models.BooleanField(default=False)
+    heat_bonus = models.DecimalField(max_digits=2, decimal_places=1, default=0)
 
     def __str__(self):
         return str(self.review)
@@ -116,6 +178,41 @@ class BlitzReview(models.Model):
 
     def effective_chapters_reviewed(self):
         return min(self.review.word_count // self.blitz.scoring.words_per_chapter, self.review.chapters)
+
+    def calculate_heat_bonus(self):
+        heat_bonus = 0
+        # If hypothetically a fic has mutliple authors, we should get the biggest heat bonus that applies for any of them.
+        for author in self.review.fic.get_authors():
+            try:
+                recipient = BlitzUser.objects.get(blitz=self.blitz, member=author)
+            except BlitzUser.DoesNotExist:
+                # This author is not participating in Blitz - no heat bonus.
+                return 0
+
+            # Have we already claimed a heat bonus for this author this Blitz?
+            prev_heat_bonus = BlitzReview.objects.filter(blitz=self.blitz, review__author=self.review.author, review__fic__authors=author, heat_bonus__gt=0).exists()
+
+            if prev_heat_bonus:
+                # We've already received a heat bonus for this author this Blitz - no double-dipping.
+                continue
+
+            reviews_given = BlitzReview.objects.filter(blitz=self.blitz, review__author=author).count()
+            reviews_received = BlitzReview.objects.filter(blitz=self.blitz, review__fic__authors=author).count()
+
+            if reviews_given <= reviews_received:
+                # No bonus for an author who has received the same number or more reviews than they've given.
+                continue
+
+            base_bonus = min((reviews_given + 1) / (reviews_received + 1) * float(self.blitz.scoring.heat_bonus_multiplier) - 1, float(self.blitz.scoring.max_heat_bonus))
+
+            # Round to the nearest half-point.
+            rounded_bonus = int(base_bonus * 2 + 0.5) / 2
+
+            # If this is bigger than the heat bonus we currently have, replace it.
+            if rounded_bonus > heat_bonus:
+                heat_bonus = rounded_bonus
+
+        return decimal.Decimal(heat_bonus)
 
 
 class ReviewChapterLink(models.Model):

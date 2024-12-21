@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import re
 import requests
+import string
+import secrets
 from datetime import datetime, timezone
 from django.db import models
 from django.db.models import Q
@@ -270,7 +272,8 @@ class MemberPage(ForumPage):
 
 
 def get_verification_code():
-    return User.objects.make_random_password()
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for i in range(16))
 
 
 class User(AbstractUser):
