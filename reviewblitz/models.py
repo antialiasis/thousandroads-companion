@@ -117,7 +117,7 @@ class ReviewBlitz(models.Model):
                     LEFT JOIN (
                         SELECT
                             authors.member_id,
-                            SUM(CASE WHEN ROUND(received_review.word_count / %(words_per_chapter)s) < received_review.chapters THEN ROUND(received_review.word_count / %(words_per_chapter)s) ELSE received_review.chapters END) AS chapters_received
+                            SUM(CASE WHEN ROUND(received_review.word_count / %(words_per_chapter)s) < received_review.chapters THEN CAST(ROUND(received_review.word_count / %(words_per_chapter)s) AS INT) ELSE received_review.chapters END) AS chapters_received
                         FROM forum_review AS received_review
                             INNER JOIN reviewblitz_blitzreview AS received_blitzreview
                                 ON received_blitzreview.review_id = received_review.post_id
