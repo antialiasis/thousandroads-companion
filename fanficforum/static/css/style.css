@@ -240,6 +240,22 @@ blockquote.detail {
     width:50%;
 }
 
+#leaderboard-table th, #leaderboard-table td {
+    text-align:right;
+}
+
+#leaderboard-table .username {
+    text-align:left;
+}
+
+tr.highlight {
+    background:#FFD;
+}
+
+.table-striped tbody tr.highlight:nth-child(2n+1) td {
+    background:#FFC;
+}
+
 @media(min-width:767px) {
     .nomination-list {
         max-width:60%;

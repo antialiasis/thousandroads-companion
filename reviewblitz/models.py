@@ -90,7 +90,8 @@ class ReviewBlitz(models.Model):
                 s.reviews,
                 s.chapters,
                 s.words,
-                s.chapters_received,
+                s.effective_chapters,
+                s.effective_chapters_received,
                 (CASE
                     WHEN s.base_heat_bonus < 0 THEN 0
                     WHEN s.base_heat_bonus > %(max_heat_bonus)s THEN %(max_heat_bonus)s
@@ -98,42 +99,47 @@ class ReviewBlitz(models.Model):
                 END) AS heat_bonus
             FROM (
                 SELECT
-                    blitz_user.id,
-                    member.username,
-                    SUM(blitz_review.score) + COALESCE(blitz_user.bonus_points, 0) AS points,
-                    COUNT(blitz_review.id) AS reviews,
-                    SUM(review.chapters) AS chapters,
-                    SUM(review.word_count) AS words,
-                    COALESCE(received_reviews.chapters_received, 0) AS chapters_received,
-                    COALESCE(((SUM(review.chapters) + 1) / (COALESCE(received_reviews.chapters_received, 0) + 1)) * %(heat_bonus_multiplier)s - 1, 0) AS base_heat_bonus
-                FROM reviewblitz_blitzuser AS blitz_user
-                    INNER JOIN forum_member AS member
-                        ON blitz_user.member_id = member.user_id
-                    LEFT JOIN forum_review AS review
-                        ON review.author_id = member.user_id
-                    LEFT JOIN reviewblitz_blitzreview AS blitz_review
-                        ON blitz_review.review_id = review.post_id
-                        AND blitz_review.blitz_id = blitz_user.blitz_id
-                    LEFT JOIN (
-                        SELECT
-                            authors.member_id,
-                            SUM(CASE WHEN ROUND(received_review.word_count / %(words_per_chapter)s) < received_review.chapters THEN CAST(ROUND(received_review.word_count / %(words_per_chapter)s) AS INT) ELSE received_review.chapters END) AS chapters_received
-                        FROM forum_review AS received_review
-                            INNER JOIN reviewblitz_blitzreview AS received_blitzreview
-                                ON received_blitzreview.review_id = received_review.post_id
-                                AND received_blitzreview.blitz_id = %(blitz_id)s
-                                AND received_blitzreview.approved
-                            INNER JOIN forum_fic AS fic
-                                ON received_review.fic_id = fic.id
-                            INNER JOIN forum_fic_authors AS authors
-                                ON authors.fic_id = fic.id
-                        GROUP BY authors.member_id
-                    ) AS received_reviews
-                        ON received_reviews.member_id = member.user_id
-                WHERE blitz_user.blitz_id = %(blitz_id)s
-                    AND blitz_review.approved
-                GROUP BY blitz_user.id, member.user_id, received_reviews.member_id
-                ORDER BY points DESC
+                    s2.*,
+                    ((CAST(s2.effective_chapters AS REAL) + 1) / (CAST(s2.effective_chapters_received AS REAL) + 1)) * 1.0 - 1 AS base_heat_bonus
+                FROM (
+                    SELECT
+                        blitz_user.id,
+                        member.username,
+                        SUM(blitz_review.score) + COALESCE(blitz_user.bonus_points, 0) AS points,
+                        COUNT(blitz_review.id) AS reviews,
+                        SUM(review.chapters) AS chapters,
+                        SUM(review.word_count) AS words,
+                        COALESCE(SUM(CASE WHEN CAST(review.word_count / %(words_per_chapter)s AS INT) < review.chapters THEN CAST(review.word_count / %(words_per_chapter)s AS INT) ELSE review.chapters END), 0) AS effective_chapters,
+                        COALESCE(received_reviews.chapters_received, 0) AS effective_chapters_received
+                    FROM reviewblitz_blitzuser AS blitz_user
+                        INNER JOIN forum_member AS member
+                            ON blitz_user.member_id = member.user_id
+                        LEFT JOIN forum_review AS review
+                            ON review.author_id = member.user_id
+                        LEFT JOIN reviewblitz_blitzreview AS blitz_review
+                            ON blitz_review.review_id = review.post_id
+                            AND blitz_review.blitz_id = blitz_user.blitz_id
+                        LEFT JOIN (
+                            SELECT
+                                authors.member_id,
+                                SUM(CASE WHEN CAST(received_review.word_count / %(words_per_chapter)s AS INT) < received_review.chapters THEN CAST(received_review.word_count / %(words_per_chapter)s AS INT) ELSE received_review.chapters END) AS chapters_received
+                            FROM forum_review AS received_review
+                                INNER JOIN reviewblitz_blitzreview AS received_blitzreview
+                                    ON received_blitzreview.review_id = received_review.post_id
+                                    AND received_blitzreview.blitz_id = %(blitz_id)s
+                                    AND received_blitzreview.approved
+                                INNER JOIN forum_fic AS fic
+                                    ON received_review.fic_id = fic.id
+                                INNER JOIN forum_fic_authors AS authors
+                                    ON authors.fic_id = fic.id
+                            GROUP BY authors.member_id
+                        ) AS received_reviews
+                            ON received_reviews.member_id = member.user_id
+                    WHERE blitz_user.blitz_id = %(blitz_id)s
+                        AND blitz_review.approved
+                    GROUP BY blitz_user.id, member.user_id, received_reviews.member_id
+                    ORDER BY points DESC
+                ) s2
             ) s
         """, dict(
             blitz_id=self.id,

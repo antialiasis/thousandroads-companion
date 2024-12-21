@@ -21,26 +21,26 @@
 {% endwith %}
 {% endif %}
 <div class="table-responsive">
-<table class="table table-striped">
+<table id="leaderboard-table" class="table table-striped">
 <thead>
 <tr>
-<th>Reviewer</th>
+<th class="username">Reviewer</th>
 <th>Points</th>
 <th>Reviews written</th>
 <th>Chapters reviewed</th>
-<th>Chapter reviews received</th>
+<th>Effective given / received</th>
 <th>Heat bonus</th>
 <th>Words written</th>
 </tr>
 </thead>
 <tbody>
 {% for entry in leaderboard %}
-<tr>
-<td>{{entry.username}}</td>
+<tr{% if entry.heat_bonus > 0 %} class="highlight"{% endif %}>
+<td class="username">{{entry.username}}</td>
 <td>{{entry.points}}</td>
 <td>{{entry.reviews}}</td>
 <td>{{entry.chapters}}</td>
-<td>{{entry.chapters_received}}</td>
+<td>{{entry.effective_chapters}} / {{entry.effective_chapters_received}}</td>
 <td>{{entry.heat_bonus}}</td>
 <td>{{entry.words}}</td>
 </tr>
