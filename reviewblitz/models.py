@@ -138,8 +138,8 @@ class ReviewBlitz(models.Model):
         """, dict(
             blitz_id=self.id,
             words_per_chapter=self.scoring.words_per_chapter,
-            max_heat_bonus=self.scoring.max_heat_bonus,
-            heat_bonus_multiplier=self.scoring.heat_bonus_multiplier
+            max_heat_bonus=float(self.scoring.max_heat_bonus),
+            heat_bonus_multiplier=float(self.scoring.heat_bonus_multiplier)
         ))
 
 
