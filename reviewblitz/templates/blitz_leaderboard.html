@@ -37,11 +37,11 @@
 {% for entry in leaderboard %}
 <tr{% if entry.heat_bonus > 0 %} class="highlight"{% endif %}>
 <td class="username">{{entry.username}}</td>
-<td>{{entry.points}}</td>
+<td>{{entry.points|floatformat:2}}</td>
 <td>{{entry.reviews}}</td>
 <td>{{entry.chapters}}</td>
 <td>{{entry.effective_chapters}} / {{entry.effective_chapters_received}}</td>
-<td>{{entry.heat_bonus}}</td>
+<td>{{entry.heat_bonus|floatformat:1}}</td>
 <td>{{entry.words}}</td>
 </tr>
 {% endfor %}

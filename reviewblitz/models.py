@@ -46,7 +46,11 @@ class ReviewBlitzScoring(models.Model):
     long_chapter_bonus_words = models.PositiveIntegerField(help_text="The word count threshold above which a long chapter bonus can be given.")
     long_chapter_bonus = models.DecimalField(max_digits=3, decimal_places=2, help_text="The bonus points given for reviewing a long chapter.")
     heat_bonus_multiplier = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The multiplier applied to the ratio of (reviews given + 1) / (reviews received + 1) to determine the heat bonus. (Set to 0 to disable this bonus.)")
-    max_heat_bonus = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The maximum heat bonus that can be given.")
+    max_heat_bonus_tier_0 = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The maximum heat bonus that can be given below the tier 1 threshold.")
+    heat_bonus_threshold_tier_1 = models.PositiveIntegerField(default=5, help_text="The number of effective chapters reviewed required to reach the tier 1 maximum heat bonus.")
+    max_heat_bonus_tier_1 = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The maximum heat bonus that can be given below the tier 2 threshold.")
+    heat_bonus_threshold_tier_2 = models.PositiveIntegerField(default=20, help_text="The number of effective chapters reviewed required to reach the full maximum heat bonus.")
+    max_heat_bonus = models.DecimalField(max_digits=3, decimal_places=2, default=0, help_text="The maximum heat bonus that can be given, after reaching the tier 2 threshold.")
 
     def __str__(self):
         return self.name
@@ -94,12 +98,17 @@ class ReviewBlitz(models.Model):
                 s.effective_chapters_received,
                 (CASE
                     WHEN s.base_heat_bonus < 0 THEN 0
-                    WHEN s.base_heat_bonus > %(max_heat_bonus)s THEN %(max_heat_bonus)s
+                    WHEN s.base_heat_bonus > s.max_heat_bonus THEN s.max_heat_bonus
                     ELSE ROUND(s.base_heat_bonus * 2) / 2
                 END) AS heat_bonus
             FROM (
                 SELECT
                     s2.*,
+                    (CASE
+                        WHEN s2.effective_chapters < %(heat_bonus_threshold_tier_1)s THEN %(max_heat_bonus_tier_0)s
+                        WHEN s2.effective_chapters < %(heat_bonus_threshold_tier_2)s THEN %(max_heat_bonus_tier_1)s
+                        ELSE %(max_heat_bonus)s
+                    END) AS max_heat_bonus,
                     ((CAST(s2.effective_chapters AS REAL) + 1) / (CAST(s2.effective_chapters_received AS REAL) + 1)) * 1.0 - 1 AS base_heat_bonus
                 FROM (
                     SELECT
@@ -144,6 +153,10 @@ class ReviewBlitz(models.Model):
         """, dict(
             blitz_id=self.id,
             words_per_chapter=self.scoring.words_per_chapter,
+            max_heat_bonus_tier_0=float(self.scoring.max_heat_bonus_tier_0),
+            heat_bonus_threshold_tier_1=self.scoring.heat_bonus_threshold_tier_1,
+            max_heat_bonus_tier_1=float(self.scoring.max_heat_bonus_tier_1),
+            heat_bonus_threshold_tier_2=self.scoring.heat_bonus_threshold_tier_2,
             max_heat_bonus=float(self.scoring.max_heat_bonus),
             heat_bonus_multiplier=float(self.scoring.heat_bonus_multiplier)
         ))
@@ -187,6 +200,8 @@ class BlitzReview(models.Model):
 
     def calculate_heat_bonus(self):
         heat_bonus = 0
+
+        scoring = self.blitz.scoring
         # If hypothetically a fic has mutliple authors, we should get the biggest heat bonus that applies for any of them.
         for author in self.review.fic.get_authors():
             print("Calculating heat bonus for author %s..." % author.username)
@@ -206,16 +221,19 @@ class BlitzReview(models.Model):
                 # We've already received a heat bonus for this author this Blitz - no double-dipping.
                 continue
 
-            reviews_given = BlitzReview.objects.filter(blitz=self.blitz, review__author=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / self.blitz.scoring.words_per_chapter)))['effective_chapters'] or 0
+            reviews_given = BlitzReview.objects.filter(blitz=self.blitz, review__author=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / scoring.words_per_chapter)))['effective_chapters'] or 0
             print("Chapter reviews given:", reviews_given)
-            reviews_received = BlitzReview.objects.filter(blitz=self.blitz, review__fic__authors=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / self.blitz.scoring.words_per_chapter)))['effective_chapters'] or 0
+            reviews_received = BlitzReview.objects.filter(blitz=self.blitz, review__fic__authors=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / scoring.words_per_chapter)))['effective_chapters'] or 0
             print("Chapter reviews received:", reviews_received)
 
             if reviews_given <= reviews_received:
                 # No bonus for an author who has received the same number or more reviews than they've given.
                 continue
 
-            base_bonus = min((reviews_given + 1) / (reviews_received + 1) * float(self.blitz.scoring.heat_bonus_multiplier) - 1, float(self.blitz.scoring.max_heat_bonus))
+            max_heat_bonus = scoring.max_heat_bonus_tier_0 if reviews_given < scoring.heat_bonus_threshold_tier_1 else scoring.max_heat_bonus_tier_1 if reviews_given < scoring.heat_bonus_threshold_tier_2 else scoring.max_heat_bonus
+            print("Max heat bonus:", max_heat_bonus)
+
+            base_bonus = min((reviews_given + 1) / (reviews_received + 1) * float(scoring.heat_bonus_multiplier) - 1, float(max_heat_bonus))
             print("Base bonus:", base_bonus)
 
             # Round to the nearest half-point.
