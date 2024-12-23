@@ -6,8 +6,11 @@
 <h1>Blitz Review Approval Queue</h1>
     {% if blitzreview_list|length == 0 %}<p>There are currently no reviews awaiting approval. Nice one!</p>
         <div class="tenor-gif-embed" data-postid="5217154" data-share-method="host" data-aspect-ratio="1.33333" data-width="min(500px, 100%)"><a href="https://tenor.com/view/pokemon-party-hard-gif-5217154">Pokemon Party GIF</a>from <a href="https://tenor.com/search/pokemon-gifs">Pokemon GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
-    {% elif blitzreview_list|length == 1 %}<p>There is currently 1 review awaiting approval.</p>
-    {% else %}<p>There are currently {{ blitzreview_list|length }} reviews awaiting approval.</p>
+    {% else %}
+        {% if blitzreview_list|length == 1 %}<p>There is currently 1 review awaiting approval.</p>
+        {% else %}<p>There are currently {{ blitzreview_list|length }} reviews awaiting approval.</p>
+        {% endif %}
+	<p>If you're new to approving reviews or want a refresher on what to look out for, take a look at the <a href="{% url 'blitz_review_approval_guidelines' %}">review approval guidelines</a>!</p>
     {% endif %}
 {% include "blitz_review_approval_queue_list.html" %}
 {% endblock %}
