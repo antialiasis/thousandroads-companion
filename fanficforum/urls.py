@@ -32,6 +32,7 @@ urlpatterns = [
     re_path(r'^blitz/history/$', BlitzHistoryView.as_view(), name="blitz_history"),
     re_path(r'^blitz/submit/$', BlitzReviewSubmissionFormView.as_view(), name="blitz_review_submit"),
     re_path(r'^blitz/queue/$', BlitzReviewApprovalQueueView.as_view(), name="blitz_review_approval_queue"),
+    re_path(r'^blitz/approval_guide/$', TemplateView.as_view(template_name="blitz_review_approval_guidelines.html"), name="blitz_review_approval_guidelines"),
     re_path(r'^blitz/leaderboard/$', BlitzLeaderboardView.as_view(), name="blitz_leaderboard"),
     re_path(r'^blitz/has_reviewed/$', HasReviewedView.as_view(), name="has_reviewed"),
     re_path(r'^blitz/user/$', BlitzUserView.as_view(), name="blitz_user"),
