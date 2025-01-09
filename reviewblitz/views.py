@@ -80,12 +80,14 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
 
         # Apply the heat bonus.
         # If we already have a blitzreview, then don't recalculate it - just keep the heat bonus the review had when originally submitted.
-        if blitz.scoring.heat_bonus_multiplier and not blitzreview.id:
-            heat_bonus = blitzreview.calculate_heat_bonus()
-            score += heat_bonus
-            # Keep track of the heat bonus we got for this review if any, since we won't be able to recalculate it later,
-            # and we need to track whether we already received a heat bonus for this author!
-            blitzreview.heat_bonus = heat_bonus
+        if blitz.scoring.heat_bonus_multiplier:
+            if not blitzreview.id:
+                heat_bonus = blitzreview.calculate_heat_bonus()
+                # Keep track of the heat bonus we got for this review if any, since we won't be able to recalculate it later,
+                # and we need to track whether we already received a heat bonus for this author!
+                blitzreview.heat_bonus = heat_bonus
+
+            score += blitzreview.heat_bonus
 
         blitzreview.theme = form.cleaned_data["satisfies_theme"] and theme_bonuses_applied > 0
         blitzreview.score = score
