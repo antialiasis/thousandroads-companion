@@ -14,12 +14,9 @@ class HasReviewedForm(forms.Form):
 class ReviewField(forms.Field):
     def to_python(self, value):
         try:
-            review = ReviewPage.from_url(value).object
+            review = ReviewPage.from_url(value, force_download=True).object
         except ValueError as e:
             raise ValidationError("Invalid review URL", code="invalid") from e
-
-        if BlitzReview.objects.filter(blitz=ReviewBlitz.get_current(), review=review).exists():
-            raise ValidationError("This review has already been submitted.", code="invalid")
 
         return review
 
@@ -55,7 +52,6 @@ class BlitzReviewSubmissionForm(forms.Form):
         print(f"User: {self.user.member=}")
         if review.author != self.user.member:
             author = review.author
-            review.delete()
             raise ValidationError(
                 "This review was written by %(author)s, not you!",
                 code="forbidden",

@@ -26,12 +26,20 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
         review.save()
 
         blitz = ReviewBlitz.get_current()
-        blitzreview = BlitzReview(blitz=blitz, review=review)
+
+        # Has this review already been submitted for this Blitz?
+        try:
+            blitzreview = BlitzReview.objects.get(blitz=blitz, review=review)
+        except BlitzReview.DoesNotExist:
+            blitzreview = BlitzReview(blitz=blitz, review=review)
+
         week_index = blitzreview.week_index()
         print(f"This review was posted in week {week_index} of the Blitz.")
 
         weekly_theme = blitzreview.get_theme()
         prev_reviews = BlitzReview.objects.filter(blitz=blitz, review__author=review.author, review__fic=review.fic)
+        if blitzreview.id:
+            prev_reviews = prev_reviews.filter(id__lt=blitzreview.id)
 
         # Find how many effective chapters (i.e. number of chapters or increments of the Blitz's
         # words per chapter, whichever is smaller) we've already reviewed of this fic this Blitz.
@@ -71,7 +79,8 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
                 long_chapters.add(chapter)
 
         # Apply the heat bonus.
-        if blitz.scoring.heat_bonus_multiplier:
+        # If we already have a blitzreview, then don't recalculate it - just keep the heat bonus the review had when originally submitted.
+        if blitz.scoring.heat_bonus_multiplier and not blitzreview.id:
             heat_bonus = blitzreview.calculate_heat_bonus()
             score += heat_bonus
             # Keep track of the heat bonus we got for this review if any, since we won't be able to recalculate it later,
@@ -80,7 +89,11 @@ class BlitzReviewSubmissionFormView(LoginRequiredMixin, VerificationRequiredMixi
 
         blitzreview.theme = form.cleaned_data["satisfies_theme"] and theme_bonuses_applied > 0
         blitzreview.score = score
+        blitzreview.approved = False
         blitzreview.save()
+
+        if blitzreview.chapter_links.count():
+            blitzreview.chapter_links.all().delete()
 
         for chapter in long_chapters:
             ReviewChapterLink.objects.create(

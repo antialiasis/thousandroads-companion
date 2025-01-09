@@ -202,7 +202,7 @@ class BlitzReview(models.Model):
         heat_bonus = 0
 
         scoring = self.blitz.scoring
-        # If hypothetically a fic has mutliple authors, we should get the biggest heat bonus that applies for any of them.
+        # If hypothetically a fic has multiple authors, we should get the biggest heat bonus that applies for any of them.
         for author in self.review.fic.get_authors():
             print("Calculating heat bonus for author %s..." % author.username)
             try:
@@ -221,9 +221,9 @@ class BlitzReview(models.Model):
                 # We've already received a heat bonus for this author this Blitz - no double-dipping.
                 continue
 
-            reviews_given = BlitzReview.objects.filter(blitz=self.blitz, review__author=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / scoring.words_per_chapter)))['effective_chapters'] or 0
+            reviews_given = int(BlitzReview.objects.filter(blitz=self.blitz, review__author=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / scoring.words_per_chapter)))['effective_chapters'] or 0)
             print("Chapter reviews given:", reviews_given)
-            reviews_received = BlitzReview.objects.filter(blitz=self.blitz, review__fic__authors=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / scoring.words_per_chapter)))['effective_chapters'] or 0
+            reviews_received = int(BlitzReview.objects.filter(blitz=self.blitz, review__fic__authors=author, approved=True).aggregate(effective_chapters=Sum(Least(F('review__chapters'), F('review__word_count') / scoring.words_per_chapter)))['effective_chapters'] or 0)
             print("Chapter reviews received:", reviews_received)
 
             if reviews_given <= reviews_received:
